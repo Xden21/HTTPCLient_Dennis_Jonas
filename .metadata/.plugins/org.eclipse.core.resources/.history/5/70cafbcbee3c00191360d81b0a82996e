@@ -1,0 +1,29 @@
+package htmlclient;
+
+/**
+ * A class for html GET commands.
+ * @author Dennis Debree *
+ */
+public class GetCommand extends Command {
+
+	/**
+	 * Constructs a new GetCommand.
+	 * @param path The path of this GetCommand
+	 * @effect A new Command is constructed
+	 */
+	public GetCommand(String path) throws IllegalArgumentException {
+		super(path);
+		// TODO Auto-generated constructor stub
+	}
+
+	/**
+	 * Executes this command.
+	 * The response will be stored.
+	 */
+	@Override
+	public void ExecuteCommand() {
+		// TODO Auto-generated method stub
+		
+	}
+
+}

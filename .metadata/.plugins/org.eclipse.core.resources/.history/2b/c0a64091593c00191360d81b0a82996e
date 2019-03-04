@@ -1,0 +1,12 @@
+package htmlclient;
+
+/**
+ * An 
+ * @author denni
+ *
+ */
+public abstract class Command {
+
+	
+	
+}

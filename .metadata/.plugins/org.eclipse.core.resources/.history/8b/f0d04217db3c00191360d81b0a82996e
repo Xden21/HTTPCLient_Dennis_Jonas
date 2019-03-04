@@ -1,0 +1,22 @@
+package htmlclient;
+
+/**
+ * An abstract class for an html command.
+ * @author Dennis Debree
+ */
+public abstract class Command {
+
+	/**
+	 * The path of this request.
+	 */
+	private String path;
+	
+	public String GetPath() {
+		return path;
+	}
+	
+	public String SetPath(String path) {
+		
+	}
+	
+}

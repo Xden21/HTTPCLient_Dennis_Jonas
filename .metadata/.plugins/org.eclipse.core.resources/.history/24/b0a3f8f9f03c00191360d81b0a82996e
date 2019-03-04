@@ -1,0 +1,42 @@
+package htmlclient;
+
+import java.io.BufferedReader;
+import java.io.PrintWriter;
+
+/**
+ * A class for html GET commands.
+ * 
+ * @author Dennis Debree
+ */
+public class GetCommand extends Command {
+
+	/**
+	 * Constructs a new GetCommand.
+	 * 
+	 * @param path The path of this GetCommand
+	 * @param writer The writer for this GetCommand
+	 * @param reader The reader for this GetCommand
+	 * @effect A new Command is constructed
+	 */
+	public GetCommand(String path, PrintWriter writer, BufferedReader reader) throws IllegalArgumentException {
+		super(path, writer, reader);
+	}
+
+	/**
+	 * Executes this command. The response will be stored.
+	 */
+	@Override
+	public void ExecuteCommand() {
+		PrintWriter writer = GetWriter();
+		.print("GET " + uri.getPath() + " HTTP/1.1\r\n");
+		toServer.print("Host: " + uri.getHost() + "\r\n");
+		toServer.print("\r\n");
+		toServer.flush();
+
+		String line;
+		while ((line = fromServer.readLine()) != null) {
+			System.out.println(line);
+		}
+	}
+
+}

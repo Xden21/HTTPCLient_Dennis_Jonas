@@ -1,0 +1,30 @@
+package htmlclient;
+
+/**
+ * An abstract class for an html command.
+ * @author Dennis Debree
+ */
+public abstract class Command {
+
+	/**
+	 * The path of this command.
+	 */
+	private String path;
+	
+	/**
+	 * The response to this command.
+	 */
+	private String response;
+	
+	public String GetPath() {
+		return path;
+	}
+	
+	public void SetPath(String path) throws IllegalArgumentException {
+		if(path == null || path == "")
+			throw new IllegalArgumentException("The given path is not valid.");
+		
+		this.path = path;
+	}
+	
+}

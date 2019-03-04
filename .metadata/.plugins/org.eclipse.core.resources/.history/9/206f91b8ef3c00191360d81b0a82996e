@@ -1,0 +1,110 @@
+package htmlclient;
+
+import java.io.*;
+
+/**
+ * An abstract class for an html command.
+ * @author Dennis Debree
+ */
+public abstract class Command {
+
+	/*
+	 * Constructor
+	 */
+	
+	/**
+	 * Constructs a new command.
+	 * @param path	The path for this command.
+	 * @effect The given path is the new path of this command.
+	 */
+	public Command(String path) throws IllegalArgumentException
+	{
+		SetPath(path);
+	}
+	
+	/*
+	 * Variables
+	 */
+	
+	/**
+	 * The path of this command.
+	 */
+	private String path;
+	
+	/**
+	 * The response to this command.
+	 */
+	private String response;
+	
+	/**
+	 * The writer to the host.
+	 */
+	private PrintWriter writer;
+	
+	/**
+	 * The reader from the host.
+	 */
+	private BufferedReader reader;
+	
+	/*
+	 * Methods
+	 */
+	
+	/**
+	 * Returns the path of this command.
+	 * @return	The path of this command.
+	 */
+	public String GetPath() {
+		return path;
+	}
+	
+	/**
+	 * Sets the path of this command.
+	 * @param path	The new path for this command.
+	 * @post the given path is the new path of this command.
+	 * @throws IllegalArgumentException	The given path is not valid.
+	 * 									path was null or empty or the first character wasn't an /.
+	 */
+	public void SetPath(String path) throws IllegalArgumentException {
+		if((path == null) || (path == "") || (path.indexOf("/") != 0))
+			throw new IllegalArgumentException("The given path is not valid.");
+		
+		this.path = path;
+	}
+	
+	/**
+	 * Gets the response of this command.
+	 * @return response of this command.
+	 */
+	public String GetResponse()	{
+		return response;
+	}
+	
+	/**
+	 * Sets the response of this command.
+	 * @param response The response of this command.
+	 * @post  The given response is the response of this command.
+	 * @throws IllegalArgumentException The given response is not valid.
+	 */
+	protected void SetResponse(String response) throws IllegalArgumentException {
+		if(response == null)
+			throw new IllegalArgumentException("The given response is not valid.");
+		this.response = response;
+	}
+	
+	public PrintWriter GetWriter()
+	{
+		return writer;
+	}
+	
+	public BufferedReader GetReader()
+	{
+		return reader;
+	}
+	
+	/**
+	 * Executes this command.
+	 * @post The response of this command is the new response.
+	 */
+	public abstract void ExecuteCommand();
+}

@@ -1,0 +1,11 @@
+package htmlclient;
+
+/**
+ * An abstract class for an html command.
+ * @author Dennis Debree
+ */
+public abstract class Command {
+
+	private String path;
+	
+}

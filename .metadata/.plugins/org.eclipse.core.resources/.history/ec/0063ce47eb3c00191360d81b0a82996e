@@ -1,0 +1,35 @@
+package htmlclient;
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+/**
+ * The html client test class. This serves as a baseline for the html client.
+ * @author Dennis Debree
+ *
+ */
+public class TestClient {	
+	
+	/**
+	 * The socket for this html session.
+	 */
+	private Socket socket;
+	
+	private String hostName;
+	
+	/**
+	 * Returns the socket of this html session.
+	 * @return The current socket.
+	 */
+	public Socket GetSocket()
+	{
+		return socket;
+	}
+	
+	/**
+	 * 
+	 */
+	public TestClient() {
+		
+	}
+}

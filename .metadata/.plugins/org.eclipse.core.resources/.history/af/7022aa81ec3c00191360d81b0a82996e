@@ -1,0 +1,16 @@
+package htmlclient;
+
+public class GetCommand extends Command {
+
+	public GetCommand(String path) throws IllegalArgumentException {
+		super(path);
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+	public void ExecuteCommand() {
+		// TODO Auto-generated method stub
+
+	}
+
+}

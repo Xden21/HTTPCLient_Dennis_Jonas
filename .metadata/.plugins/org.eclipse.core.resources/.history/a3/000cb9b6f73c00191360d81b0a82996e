@@ -1,0 +1,68 @@
+package htmlclient;
+
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+/**
+ * The html client test class. This serves as a baseline for the html client.
+ * 
+ * @author Dennis Debree
+ *
+ */
+public class TestClient {
+
+	public static void main(String[] args) throws Exception {
+		String command;
+		URI uri;
+		int port;
+		Command httpCommand;
+
+		if (args.length == 2) {
+			command = args[0];
+			uri = new URI("http://" + args[1]);
+			port = 80;
+		} else if (args.length == 3) {
+			command = args[0];
+			uri = new URI("http://" + args[1]);
+			port = Integer.parseInt(args[2]);
+		} else {
+			System.out.println("Not the correct input arguments!");
+			System.out.println("Usage:");
+			System.out.println("\tHtmlClientTest HTTPCommand URI");
+			System.out.println("\tHtmlClientTest HTTPCommand URI Port");
+			return;
+		}
+
+		switch (command) {
+		case "GET":
+			//httpCommand = new GetCommand(host, path, writer, reader)
+			break;
+		case "PUT":
+			break;
+		case "POST":
+			break;
+		default:
+			break;
+		}
+
+		Socket clientSocket = new Socket(uri.getHost(), port);
+
+		PrintWriter toServer = new PrintWriter(clientSocket.getOutputStream());
+
+		BufferedReader fromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+		GetCommand httpcommand = new GetCommand(uri.getHost(), uri.getPath(), toServer, fromServer);
+		
+		httpcommand.executeCommand();
+		
+		System.out.println(httpcommand.getResponse());
+		
+		toServer.close();
+		
+		fromServer.close();
+		
+		clientSocket.close();
+	}
+
+}

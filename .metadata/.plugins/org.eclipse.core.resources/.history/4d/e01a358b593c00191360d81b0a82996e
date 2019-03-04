@@ -1,0 +1,5 @@
+package htmlclient;
+
+public abstract class Request {
+
+}

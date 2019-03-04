@@ -1,0 +1,20 @@
+package htmlclient;
+
+/**
+ * A class for html GET commands.
+ * @author Dennis Debree *
+ */
+public class GetCommand extends Command {
+
+	public GetCommand(String path) throws IllegalArgumentException {
+		super(path);
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+	public void ExecuteCommand() {
+		// TODO Auto-generated method stub
+
+	}
+
+}
