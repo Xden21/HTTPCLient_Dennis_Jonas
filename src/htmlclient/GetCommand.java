@@ -84,7 +84,7 @@ public class GetCommand extends Command {
 		}
 		System.out.println("");
 
-		ResponseHeader parsedHeader = parseHeader(header);
+		ResponseHeader parsedHeader = parseHeader(header, false);
 
 		// TODO handle other types
 
@@ -109,7 +109,7 @@ public class GetCommand extends Command {
 		return response;
 	}
 	
-	private ResponseHeader parseHeader(ArrayList<String> header) {
+	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
 		HashMap<String, String> headerMap = new HashMap<>();
 		for (int i = 1; i < header.size(); i++) {
 			String[] pair = header.get(i).split(":");
@@ -130,6 +130,8 @@ public class GetCommand extends Command {
 		} else {
 			if (headerMap.containsKey("content-length"))
 				contentLength = Integer.parseInt(headerMap.get("content-length"));
+			else if(isFooter)
+				contentLength = 0;
 			else
 				throw new IllegalResponseException("No Content-Length");
 		}
@@ -215,7 +217,7 @@ public class GetCommand extends Command {
 			System.out.println(elem);
 		}
 		// Handle them
-		ResponseHeader parsedFooter = parseHeader(footer);
+		ResponseHeader parsedFooter = parseHeader(footer, true);
 		if (parsedFooter.getConnectionClosed()) // Possible that this is in footer? Check for other possible ones that
 												// matter to us.
 			info.setConnectionClosed(true);
