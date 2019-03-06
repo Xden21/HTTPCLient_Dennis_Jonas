@@ -8,11 +8,12 @@ public class ResponseHeader {
 	 * Constructor
 	 */
 	
-	public ResponseHeader(boolean chunked, int contentLength, boolean connectionClosed, ContentType contentType)
+	public ResponseHeader(int statusCode, String statusMessage, boolean chunked, int contentLength, boolean connectionClosed, ContentType contentType)
 			throws IllegalArgumentException {
 		if(contentLength < 0)
 			throw new IllegalArgumentException("Not a valid length");
-		
+		this.statusCode = statusCode;
+		this.statusMessage = statusMessage;
 		this.chunked = chunked;
 		this.contentLength = contentLength;
 		this.connectionClosed = connectionClosed;
@@ -22,6 +23,10 @@ public class ResponseHeader {
 	/*
 	 * Variables
 	 */
+	
+	private int statusCode;
+	
+	private String statusMessage;
 	
 	private boolean chunked;
 	
@@ -34,6 +39,14 @@ public class ResponseHeader {
 	/*
 	 * Methods
 	 */
+	
+	public int getStatusCode() {
+		return statusCode;
+	}
+	
+	public String getStatusMessage() {
+		return statusMessage;
+	}
 	
 	public boolean isChunked() {
 		return chunked;

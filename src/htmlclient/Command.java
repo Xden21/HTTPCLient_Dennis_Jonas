@@ -54,7 +54,7 @@ public abstract class Command {
 	/**
 	 * The response to this command.
 	 */
-	private String response;
+	private Object response;
 
 	/**
 	 * The writer to the host.
@@ -65,6 +65,11 @@ public abstract class Command {
 	 * The reader from the host.
 	 */
 	private InputStream reader;
+	
+	/**
+	 * The response header properties of this command.
+	 */
+	private ResponseHeader header;
 
 	/*
 	 * Methods
@@ -109,7 +114,7 @@ public abstract class Command {
 	 * 
 	 * @return response of this command.
 	 */
-	public String getResponse() {
+	public Object getResponse() {
 		return response;
 	}
 
@@ -120,7 +125,7 @@ public abstract class Command {
 	 * @post The given response is the response of this command.
 	 * @throws IllegalArgumentException The given response is not valid.
 	 */
-	protected void setResponse(String response) throws IllegalArgumentException {
+	protected void setResponse(Object response) throws IllegalArgumentException {
 		if (response == null)
 			throw new IllegalArgumentException("The given response is not valid.");
 		this.response = response;
@@ -142,6 +147,26 @@ public abstract class Command {
 	 */
 	public InputStream getReader() {
 		return reader;
+	}
+	
+	/**
+	 * Sets the response header
+	 * @param header the new response header
+	 * @throws IllegalArgumentException the response header was invalid.
+	 */
+	public void setHeader(ResponseHeader header) throws IllegalArgumentException{
+		if(header == null)
+			throw new IllegalArgumentException();
+		
+		this.header = header;
+	}
+	
+	/**
+	 * Gets the response header
+	 * @return the response header
+	 */
+	public ResponseHeader getHeader() {
+		return header;
 	}
 
 	/**

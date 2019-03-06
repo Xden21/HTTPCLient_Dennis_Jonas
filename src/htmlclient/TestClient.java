@@ -33,7 +33,6 @@ public class TestClient {
 			System.out.println("\tHtmlClientTest HTTPCommand URI Port");
 			return;
 		}
-
 		Socket clientSocket = new Socket(uri.getHost(), port);
 
 		OutputStream toServer = clientSocket.getOutputStream();
@@ -47,32 +46,23 @@ public class TestClient {
 		case "PUT":
 			clientSocket.close();
 			return;
-			//break;
+		// break;
 		case "POST":
 			clientSocket.close();
 			return;
-			//break;
+		// break;
 		default:
 			clientSocket.close();
 			return;
-			//break;
-		}		
-		
+		// break;
+		}
+
 		httpCommand.executeCommand();
-		
-		System.out.println(httpCommand.getResponse());
-		
+
+		System.out.println((String) httpCommand.getResponse());
+
 		PrintWriter out = new PrintWriter(uri.getHost() + ".txt");
-		
-		out.print(httpCommand.getResponse());
-		
-		out.close();
-		
-		toServer.close();
-		
-		fromServer.close();
-		
-		clientSocket.close();
+
 	}
 
 }

@@ -1,6 +1,8 @@
 package htmlclient;
 
-import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -8,7 +10,16 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.*;
 
 /**
  * A class for html GET commands.
@@ -57,21 +68,22 @@ public class GetCommand extends Command {
 	/**
 	 * Processes the response.
 	 * 
-	 * @throws IOException
+	 * @throws IOException The reading of the response failed.
+	 * @return boolean that indicates wether or not to close the connection.
 	 */
 	private boolean processResponse() throws IOException {
 		// Stub. Must be expanded for pictures, possible chuncked data. And use the text
 		// length in header for efficient reading.
-		// TODO: Read header: - check if content-length or chuncked data
+		// TODO: Read header: - check if content-length or chuncked data DONE
 		// - check for connection close DONE
 		// - check for status code 100 (NOT)
-		// - check for MIME type
+		// - check for MIME type DONE
 		// TODO: Read body: - if MIME type is text/html
 		// - if content-length: use this for reading rest of page DONE (see remarks)
 		// - if chuncked data: use this for reading rest of page DONE (see remarks)
-		// - parse html file to find MIME data to be downloaded
-		// - save html to file
-		// - if MIME type is image: download and save
+		// - parse html file to find MIME data to be downloaded DONE (images)
+		// - save html to file DONE
+		// - if MIME type is image: download and save DONE
 		ArrayList<String> header = new ArrayList<>();
 		String line = readLine(getReader());
 		while (line != "") {
@@ -86,32 +98,59 @@ public class GetCommand extends Command {
 
 		ResponseHeader parsedHeader = parseHeader(header, false);
 
-		// TODO handle other types
+		setHeader(parsedHeader);
+		
+		Object response = readResponse();
 
-		//CASE: HTML page
-		String response = getResponse(parsedHeader);
-		setResponse(response);				
-		//TODO save file
-		//TODO parse html to find MIME data.
-		
-		
-		
+		// CASE: HTML page
+		if (parsedHeader.getContentType() == ContentType.HTML) {
+			setResponse(response);
+
+			if(parsedHeader.getStatusCode() == 200) {
+				// save file
+				File dir = new File("pages/");
+				if (!dir.exists())
+					dir.mkdirs();
+	
+				PrintWriter filewriter = new PrintWriter("pages/" + getHost() + "." + parsedHeader.getContentType().getExtension());
+				filewriter.print(response);
+				filewriter.flush();
+				filewriter.close();
+	
+				// TODO parse html to find MIME data.
+				parseHTMLPage((String)response);
+			}
+		} else if(parsedHeader.getContentType() == ContentType.IMAGEJPG || parsedHeader.getContentType() == ContentType.IMAGEPNG
+				|| parsedHeader.getContentType() == ContentType.IMAGEGIF) {
+			setResponse(response);
+			if(parsedHeader.getStatusCode() == 200) {
+				String dirpath = "pages/" + getPath().substring(1, getPath().lastIndexOf("/")+1);
+				File dir = new File(dirpath);
+				if(!dir.exists())
+					dir.mkdirs();
+				
+				FileOutputStream filewriter = new FileOutputStream("pages" + getPath());
+				filewriter.write((byte[]) response);
+				filewriter.flush();
+				filewriter.close();
+			}
+		}
+
 		return parsedHeader.getConnectionClosed();
 	}
 
-	private String getResponse(ResponseHeader header) throws IOException {
-		String response = "";
-		if (header.isChunked()) {
-			response = readChunked(header);
-		} else {
-			response = readFull(header);
-		}
-		return response;
-	}
-	
+	/*
+	 * Parse functions
+	 */
+
 	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
+		int start;
+		if(isFooter)
+			start = 0;
+		else
+			start = 1;
 		HashMap<String, String> headerMap = new HashMap<>();
-		for (int i = 1; i < header.size(); i++) {
+		for (int i = start; i < header.size(); i++) {
 			String[] pair = header.get(i).split(":");
 			pair[0] = pair[0].toLowerCase();
 			for (int j = 0; j < pair.length; j++) {
@@ -120,6 +159,17 @@ public class GetCommand extends Command {
 
 			headerMap.put(pair[0], pair[1]);
 		}
+		int code = 0;
+		String message = "";
+		
+		if(!isFooter)
+		{
+			String statusline = header.get(0);
+			statusline = statusline.substring(statusline.indexOf(" ")+1);
+			code = Integer.parseInt(statusline.substring(0, statusline.indexOf(" ")));
+			message = statusline.substring(statusline.indexOf(" ") + 1);
+		}
+		
 		boolean chunked = false;
 		int contentLength;
 		ContentType type;
@@ -130,7 +180,7 @@ public class GetCommand extends Command {
 		} else {
 			if (headerMap.containsKey("content-length"))
 				contentLength = Integer.parseInt(headerMap.get("content-length"));
-			else if(isFooter)
+			else if (isFooter)
 				contentLength = 0;
 			else
 				throw new IllegalResponseException("No Content-Length");
@@ -163,29 +213,81 @@ public class GetCommand extends Command {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close");
 
-		return new ResponseHeader(chunked, contentLength, connectionclosed, type);
+		return new ResponseHeader(code, message, chunked, contentLength, connectionclosed, type);
 	}
 
-	//TODO optimize?
-	private String readChunked(ResponseHeader info) throws IOException {
+	private void parseHTMLPage(String page) {
+		Document htmlpage = Jsoup.parse(page); // Parse into well formed document for parsing.
+		Elements imageTags = htmlpage.getElementsByTag("img"); // Search documents for image tags.
+		ArrayList<String> imagePaths = new ArrayList<>();
+		if(!imageTags.isEmpty())
+		{
+			for(Element imageTag : imageTags) {
+				String path = imageTag.attr("src");
+				if(!path.contains("http")) {
+					imagePaths.add(path);
+				}
+			}
+			
+			// For each path, do get request
+			for(String path : imagePaths) {
+				GetCommand imageGet = new GetCommand(getHost(), "/" + path, getWriter(), getReader());
+				try {
+					imageGet.executeCommand();
+				} catch (IOException e) {
+					System.out.println("Failed to get image");
+				}
+			}
+		}
+	}
+
+	/*
+	 * Read functions
+	 */
+
+	private Object readResponse() throws IOException, IllegalResponseException {
+		if (getHeader().getContentType() == ContentType.HTML) {
+			String response = "";
+			if (getHeader().isChunked()) {
+				response = readChunkedPage();
+			} else {
+				response = readFullPage();
+			}
+			return response;
+		} else if (getHeader().getContentType() == ContentType.IMAGEJPG || getHeader().getContentType() == ContentType.IMAGEPNG
+				|| getHeader().getContentType() == ContentType.IMAGEGIF) {
+			byte[] response;
+			if (getHeader().isChunked()) {
+				response = readChunkedRaw();
+			} else {
+				response = readFullRaw();
+			}
+			return response;		
+		} else {
+			throw new IllegalResponseException("Unsupported data type");
+		}
+	}
+
+	// TODO optimize?
+	private String readChunkedPage() throws IOException {
 		boolean lastchunk = false;
 		String body = "";
 		int amount = 0;
-		BufferedReader reader = new BufferedReader(new InputStreamReader(getReader()));
+		InputStream reader = getReader();
 		while (!lastchunk) {
 			try {
-				String hexAmount = reader.readLine();
+				String hexAmount = readLine(reader);
 				amount = Integer.parseInt(hexAmount, 16); // read amount
 				if (amount == 0)
 					lastchunk = true;
 				else {
 					String chunk;
-					char[] buffer = new char[amount];
+					byte[] buffer = new byte[amount];
 					// int count = reader.read(buffer, 0, amount);
 					// chunk = new String(buffer);
 					// int rest = amount - count;
 					for (int i = 0; i < amount; i++) {
-						buffer[i] = (char) reader.read(); // TODO: More efficient solution (even though buffered)? When
+						buffer[i] = (byte) reader.read(); // TODO: More efficient solution (even though buffered)? When
 															// using read with buffer, null values get read.
 					}
 					// while(rest != 0) {
@@ -197,7 +299,7 @@ public class GetCommand extends Command {
 					// }
 					chunk = new String(buffer);
 					body += chunk; // add to body
-					reader.readLine(); // read the CRLF
+					readLine(reader); // read the CRLF
 				}
 			} catch (NumberFormatException ex) {
 				amount = 0;
@@ -207,10 +309,10 @@ public class GetCommand extends Command {
 
 		// Read footers
 		ArrayList<String> footer = new ArrayList<>();
-		String line = reader.readLine();
+		String line = readLine(reader);
 		while (!line.equals("")) {
 			footer.add(line);
-			line = reader.readLine();
+			line = readLine(reader);
 		}
 
 		for (String elem : footer) {
@@ -220,18 +322,26 @@ public class GetCommand extends Command {
 		ResponseHeader parsedFooter = parseHeader(footer, true);
 		if (parsedFooter.getConnectionClosed()) // Possible that this is in footer? Check for other possible ones that
 												// matter to us.
-			info.setConnectionClosed(true);
+			getHeader().setConnectionClosed(true);
 
 		return body;
 	}
 
-	//TODO make sure whole response will be read
-	private String readFull(ResponseHeader info) throws IOException {
-		BufferedReader reader = new BufferedReader(new InputStreamReader(getReader()));
-		char[] buffer = new char[info.getContentLength()];
-		if ((reader.read(buffer, 0, info.getContentLength())) != info.getContentLength())
-			System.out.println("Not whole response read!");
-		return new String(buffer);
+	// TODO make sure whole response will be read
+	private String readFullPage() throws IOException {
+		InputStream reader = getReader();
+		byte[] buffer = new byte[getHeader().getContentLength()];
+		String body = "";
+		int count = reader.read(buffer, 0, getHeader().getContentLength());
+		int rest = getHeader().getContentLength() - count;
+		body += new String(buffer);
+		if(rest != 0) {
+			buffer = new byte[rest];
+			count = reader.read(buffer, 0, rest);
+			body += new String(buffer);
+			rest = rest - count;
+		}
+		return body;
 	}
 
 	private String readLine(InputStream reader) throws IOException {
@@ -260,5 +370,74 @@ public class GetCommand extends Command {
 			}
 		}
 		throw new BufferOverflowException();
+	}
+
+	private byte[] readChunkedRaw() throws IOException {
+		boolean lastchunk = false;
+		int amount = 0;
+		ArrayList<Byte> body = new ArrayList<>();
+		InputStream reader = getReader();
+		while (!lastchunk) {
+			try {
+				String hexAmount = readLine(reader);
+				amount = Integer.parseInt(hexAmount, 16); // read amount
+				if (amount == 0)
+					lastchunk = true;
+				else {
+					byte[] buffer = new byte[amount];
+					int count = reader.read(buffer, 0, amount);
+					int rest = amount - count;
+					for (int i = 0; i < count; i++) {
+						body.add(buffer[i]);
+					}
+					while (rest != 0) {
+						count = reader.read(buffer, 0, amount);
+						rest = rest - count;
+						for (int i = 0; i < count; i++) {
+							body.add(buffer[i]);
+						}
+					}
+
+					readLine(reader);
+				}
+			} catch (NumberFormatException ex) {
+				amount = 0;
+				lastchunk = true;
+			}
+		}
+		// Read footers
+		ArrayList<String> footer = new ArrayList<>();
+		String line = readLine(reader);
+		while (!line.equals("")) {
+			footer.add(line);
+			line = readLine(reader);
+		}
+
+		for (String elem : footer) {
+			System.out.println(elem);
+		}
+		// Handle them
+		ResponseHeader parsedFooter = parseHeader(footer, true);
+		if (parsedFooter.getConnectionClosed()) // Possible that this is in footer? Check for other possible ones that
+												// matter to us.
+			getHeader().setConnectionClosed(true);
+
+		// Java array to list support is terrible. (use common lang?)
+		Byte[] bodyarray;
+		bodyarray = body.toArray(new Byte[body.size()]);
+		byte[] result = new byte[body.size()];
+		for(int i = 0; i < body.size(); i++) {
+			result[i] = bodyarray[i];
+		}
+		return result;
+	}
+
+	private byte[] readFullRaw() throws IOException {
+		InputStream reader = getReader();
+		byte[] buffer = new byte[getHeader().getContentLength()];
+		if ((reader.read(buffer, 0, getHeader().getContentLength())) != getHeader().getContentLength()) {
+			System.out.println("Not whole response read!");
+		}
+		return buffer;
 	}
 }
