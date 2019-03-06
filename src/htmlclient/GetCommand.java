@@ -15,7 +15,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -24,6 +23,8 @@ import org.jsoup.select.*;
 /**
  * A class for html GET commands.
  * 
+ * TODO More mime types?
+ * 
  * @author Dennis Debree
  */
 public class GetCommand extends Command {
@@ -31,11 +32,11 @@ public class GetCommand extends Command {
 	/**
 	 * Constructs a new GetCommand.
 	 * 
-	 * @param path   The path of this GetCommand
-	 * @param writer The writer for this GetCommand
-	 * @param reader The reader for this GetCommand
-	 * @param host
-	 * @effect A new Command is constructed
+	 * @param host 		The host for this GetCommand
+	 * @param path  	The path of this GetCommand
+	 * @param writer 	The writer for this GetCommand
+	 * @param reader 	The reader for this GetCommand
+	 * @effect 			A new Command is constructed
 	 */
 	public GetCommand(String host, String path, OutputStream writer, InputStream reader)
 			throws IllegalArgumentException {
@@ -51,8 +52,7 @@ public class GetCommand extends Command {
 	@Override
 	public boolean executeCommand() throws IOException {
 		sendRequest();
-		return processResponse();
-	}
+		return processResponse();	}
 
 	/**
 	 * Sends the GET request.
@@ -72,25 +72,17 @@ public class GetCommand extends Command {
 	 * @return boolean that indicates wether or not to close the connection.
 	 */
 	private boolean processResponse() throws IOException {
-		// Stub. Must be expanded for pictures, possible chuncked data. And use the text
-		// length in header for efficient reading.
-		// TODO: Read header: - check if content-length or chuncked data DONE
-		// - check for connection close DONE
-		// - check for status code 100 (NOT)
-		// - check for MIME type DONE
-		// TODO: Read body: - if MIME type is text/html
-		// - if content-length: use this for reading rest of page DONE (see remarks)
-		// - if chuncked data: use this for reading rest of page DONE (see remarks)
-		// - parse html file to find MIME data to be downloaded DONE (images)
-		// - save html to file DONE
-		// - if MIME type is image: download and save DONE
+		
+		// Read the header
 		ArrayList<String> header = new ArrayList<>();
-		String line = readLine(getReader());
+		String line = readLine();
 		while (line != "") {
 			header.add(line);
-			line = readLine(getReader());
+			line = readLine();
 		}
 
+		System.out.println("HEADER:");
+		
 		for (String elem : header) {
 			System.out.println(elem);
 		}
@@ -99,36 +91,40 @@ public class GetCommand extends Command {
 		ResponseHeader parsedHeader = parseHeader(header, false);
 
 		setHeader(parsedHeader);
-		
+
+		// Read the resonse
 		Object response = readResponse();
 
+		// Save response
 		// CASE: HTML page
 		if (parsedHeader.getContentType() == ContentType.HTML) {
 			setResponse(response);
 
-			if(parsedHeader.getStatusCode() == 200) {
+			if (parsedHeader.getStatusCode() == 200) {
 				// save file
 				File dir = new File("pages/");
 				if (!dir.exists())
 					dir.mkdirs();
-	
-				PrintWriter filewriter = new PrintWriter("pages/" + getHost() + "." + parsedHeader.getContentType().getExtension());
+
+				PrintWriter filewriter = new PrintWriter(
+						"pages/" + getHost() + "." + parsedHeader.getContentType().getExtension());
 				filewriter.print(response);
 				filewriter.flush();
 				filewriter.close();
-	
+
 				// TODO parse html to find MIME data.
-				parseHTMLPage((String)response);
+				parseHTMLPage((String) response);
 			}
-		} else if(parsedHeader.getContentType() == ContentType.IMAGEJPG || parsedHeader.getContentType() == ContentType.IMAGEPNG
+		} else if (parsedHeader.getContentType() == ContentType.IMAGEJPG
+				|| parsedHeader.getContentType() == ContentType.IMAGEPNG
 				|| parsedHeader.getContentType() == ContentType.IMAGEGIF) {
 			setResponse(response);
-			if(parsedHeader.getStatusCode() == 200) {
-				String dirpath = "pages/" + getPath().substring(1, getPath().lastIndexOf("/")+1);
+			if (parsedHeader.getStatusCode() == 200) {
+				String dirpath = "pages/" + getPath().substring(1, getPath().lastIndexOf("/") + 1);
 				File dir = new File(dirpath);
-				if(!dir.exists())
+				if (!dir.exists())
 					dir.mkdirs();
-				
+
 				FileOutputStream filewriter = new FileOutputStream("pages" + getPath());
 				filewriter.write((byte[]) response);
 				filewriter.flush();
@@ -143,12 +139,21 @@ public class GetCommand extends Command {
 	 * Parse functions
 	 */
 
+	/**
+	 * Parsed the header or footer of the response to get the desired info.
+	 * 
+	 * @param header	The header or footer to parse
+	 * @param isFooter	Indicates wether the given data is a footer or not
+	 * @return			The data from the response header
+	 */
 	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
 		int start;
-		if(isFooter)
+		if (isFooter)
 			start = 0;
 		else
 			start = 1;
+		
+		// Put header key values in hashmap
 		HashMap<String, String> headerMap = new HashMap<>();
 		for (int i = start; i < header.size(); i++) {
 			String[] pair = header.get(i).split(":");
@@ -162,14 +167,15 @@ public class GetCommand extends Command {
 		int code = 0;
 		String message = "";
 		
-		if(!isFooter)
-		{
+		// Parse first line if header
+		if (!isFooter) {
 			String statusline = header.get(0);
-			statusline = statusline.substring(statusline.indexOf(" ")+1);
+			statusline = statusline.substring(statusline.indexOf(" ") + 1);
 			code = Integer.parseInt(statusline.substring(0, statusline.indexOf(" ")));
 			message = statusline.substring(statusline.indexOf(" ") + 1);
 		}
-		
+
+		// Process header data
 		boolean chunked = false;
 		int contentLength;
 		ContentType type;
@@ -216,21 +222,28 @@ public class GetCommand extends Command {
 		return new ResponseHeader(code, message, chunked, contentLength, connectionclosed, type);
 	}
 
+	/**
+	 * Parses a given html page, to check for MIME resources to get.
+	 * 
+	 * @param page	The page to parse.
+	 * @effect		Downloaded all embedded pictures.
+	 */
 	private void parseHTMLPage(String page) {
-		Document htmlpage = Jsoup.parse(page); // Parse into well formed document for parsing.
-		Elements imageTags = htmlpage.getElementsByTag("img"); // Search documents for image tags.
+		// Parse into well formed document for parsing.
+		Document htmlpage = Jsoup.parse(page);
+		// Search documents for image tags.
+		Elements imageTags = htmlpage.getElementsByTag("img"); 
 		ArrayList<String> imagePaths = new ArrayList<>();
-		if(!imageTags.isEmpty())
-		{
-			for(Element imageTag : imageTags) {
+		if (!imageTags.isEmpty()) {
+			for (Element imageTag : imageTags) {
 				String path = imageTag.attr("src");
-				if(!path.contains("http")) {
+				if (!path.contains("http")) {
 					imagePaths.add(path);
 				}
 			}
-			
+
 			// For each path, do get request
-			for(String path : imagePaths) {
+			for (String path : imagePaths) {
 				GetCommand imageGet = new GetCommand(getHost(), "/" + path, getWriter(), getReader());
 				try {
 					imageGet.executeCommand();
@@ -245,7 +258,15 @@ public class GetCommand extends Command {
 	 * Read functions
 	 */
 
+	/**
+	 * Reads the response of the host.
+	 * 
+	 * @returnThe response of the host.
+	 * @throws IOException	The read from the host failed.
+	 * @throws IllegalResponseException	The response was mallformed.
+	 */
 	private Object readResponse() throws IOException, IllegalResponseException {
+		// Check content type and if the response will be chunked
 		if (getHeader().getContentType() == ContentType.HTML) {
 			String response = "";
 			if (getHeader().isChunked()) {
@@ -254,7 +275,8 @@ public class GetCommand extends Command {
 				response = readFullPage();
 			}
 			return response;
-		} else if (getHeader().getContentType() == ContentType.IMAGEJPG || getHeader().getContentType() == ContentType.IMAGEPNG
+		} else if (getHeader().getContentType() == ContentType.IMAGEJPG
+				|| getHeader().getContentType() == ContentType.IMAGEPNG
 				|| getHeader().getContentType() == ContentType.IMAGEGIF) {
 			byte[] response;
 			if (getHeader().isChunked()) {
@@ -262,13 +284,18 @@ public class GetCommand extends Command {
 			} else {
 				response = readFullRaw();
 			}
-			return response;		
+			return response;
 		} else {
 			throw new IllegalResponseException("Unsupported data type");
 		}
 	}
 
-	// TODO optimize?
+	/**
+	 * Reads the response page thats in a chunked format.
+	 * 
+	 * @return	The response page from the host
+	 * @throws IOException The read from the host failed.
+	 */
 	private String readChunkedPage() throws IOException {
 		boolean lastchunk = false;
 		String body = "";
@@ -276,30 +303,29 @@ public class GetCommand extends Command {
 		InputStream reader = getReader();
 		while (!lastchunk) {
 			try {
-				String hexAmount = readLine(reader);
+				String hexAmount = readLine();
 				amount = Integer.parseInt(hexAmount, 16); // read amount
 				if (amount == 0)
 					lastchunk = true;
 				else {
 					String chunk;
 					byte[] buffer = new byte[amount];
-					// int count = reader.read(buffer, 0, amount);
-					// chunk = new String(buffer);
-					// int rest = amount - count;
-					for (int i = 0; i < amount; i++) {
-						buffer[i] = (byte) reader.read(); // TODO: More efficient solution (even though buffered)? When
-															// using read with buffer, null values get read.
-					}
-					// while(rest != 0) {
-					// buffer = new char[rest];
-					// count = reader.read(buffer, 0, rest);
-					// String part = new String(buffer);
-					// chunk += part;
-					// rest = rest - count;
-					// }
+					int count = reader.read(buffer, 0, amount);
+					
+					int rest = amount - count;
+					
 					chunk = new String(buffer);
+					chunk = chunk.replaceAll("\0", "");
+					while (rest != 0) {
+						buffer = new byte[rest];
+						count = reader.read(buffer, 0, rest);
+						String part = new String(buffer);
+						part = part.replaceAll("\0", "");
+						chunk += part;
+						rest = rest - count;
+					}
 					body += chunk; // add to body
-					readLine(reader); // read the CRLF
+					readLine(); // read the CRLF
 				}
 			} catch (NumberFormatException ex) {
 				amount = 0;
@@ -309,10 +335,10 @@ public class GetCommand extends Command {
 
 		// Read footers
 		ArrayList<String> footer = new ArrayList<>();
-		String line = readLine(reader);
+		String line = readLine();
 		while (!line.equals("")) {
 			footer.add(line);
-			line = readLine(reader);
+			line = readLine();
 		}
 
 		for (String elem : footer) {
@@ -327,7 +353,12 @@ public class GetCommand extends Command {
 		return body;
 	}
 
-	// TODO make sure whole response will be read
+	/**
+	 * Reads the response page from the host that is formatted in one part.
+	 * 
+	 * @return	The response page from the host
+	 * @throws IOException	The read from the host failed.
+	 */
 	private String readFullPage() throws IOException {
 		InputStream reader = getReader();
 		byte[] buffer = new byte[getHeader().getContentLength()];
@@ -335,16 +366,25 @@ public class GetCommand extends Command {
 		int count = reader.read(buffer, 0, getHeader().getContentLength());
 		int rest = getHeader().getContentLength() - count;
 		body += new String(buffer);
-		if(rest != 0) {
+		body.replaceAll("\0", "");
+		if (rest != 0) {
 			buffer = new byte[rest];
 			count = reader.read(buffer, 0, rest);
 			body += new String(buffer);
+			body.replaceAll("\0", "");
 			rest = rest - count;
 		}
 		return body;
 	}
 
-	private String readLine(InputStream reader) throws IOException {
+	/**
+	 * Reads one line from the stream
+	 *
+	 * @return The read line.
+	 * @throws IOException The read from the host failed.
+	 */
+	private String readLine() throws IOException {
+		InputStream reader = getReader();
 		char[] buffer = new char[1000];
 		String result;
 		int counter = 0;
@@ -355,6 +395,7 @@ public class GetCommand extends Command {
 				current = (char) currentInt;
 			else
 				throw new IOException();
+			// Check for end of line and make sure \r is not in buffer
 			if (current != '\r') {
 				if (current == '\n') {
 					if (buffer[0] == 0)
@@ -372,6 +413,12 @@ public class GetCommand extends Command {
 		throw new BufferOverflowException();
 	}
 
+	/**
+	 * Reads the raw response thats in a chunked format.
+	 * 
+	 * @return The raw response from the host
+	 * @throws IOException The read from the host failed.
+	 */
 	private byte[] readChunkedRaw() throws IOException {
 		boolean lastchunk = false;
 		int amount = 0;
@@ -379,7 +426,7 @@ public class GetCommand extends Command {
 		InputStream reader = getReader();
 		while (!lastchunk) {
 			try {
-				String hexAmount = readLine(reader);
+				String hexAmount = readLine();
 				amount = Integer.parseInt(hexAmount, 16); // read amount
 				if (amount == 0)
 					lastchunk = true;
@@ -398,7 +445,7 @@ public class GetCommand extends Command {
 						}
 					}
 
-					readLine(reader);
+					readLine();
 				}
 			} catch (NumberFormatException ex) {
 				amount = 0;
@@ -407,10 +454,10 @@ public class GetCommand extends Command {
 		}
 		// Read footers
 		ArrayList<String> footer = new ArrayList<>();
-		String line = readLine(reader);
+		String line = readLine();
 		while (!line.equals("")) {
 			footer.add(line);
-			line = readLine(reader);
+			line = readLine();
 		}
 
 		for (String elem : footer) {
@@ -426,18 +473,42 @@ public class GetCommand extends Command {
 		Byte[] bodyarray;
 		bodyarray = body.toArray(new Byte[body.size()]);
 		byte[] result = new byte[body.size()];
-		for(int i = 0; i < body.size(); i++) {
+		for (int i = 0; i < body.size(); i++) {
 			result[i] = bodyarray[i];
 		}
 		return result;
 	}
 
+	/**
+	 * Reads the raw response from the host that is formatted in one part.
+	 * 
+	 * @return The raw response from the host
+	 * @throws IOException The read from the host failed.
+	 */
 	private byte[] readFullRaw() throws IOException {
 		InputStream reader = getReader();
+		ArrayList<Byte> body = new ArrayList<>();
 		byte[] buffer = new byte[getHeader().getContentLength()];
-		if ((reader.read(buffer, 0, getHeader().getContentLength())) != getHeader().getContentLength()) {
-			System.out.println("Not whole response read!");
+		int count = reader.read(buffer, 0, getHeader().getContentLength());
+		int rest = getHeader().getContentLength() - count;
+		for (int i = 0; i < count; i++) {
+			body.add(buffer[i]);
 		}
-		return buffer;
+		if (rest != 0) {
+			buffer = new byte[rest];
+			count = reader.read(buffer, 0, rest);
+			for (int i = 0; i < count; i++) {
+				body.add(buffer[i]);
+			}
+			rest = rest - count;
+		}
+		// Java array to list support is terrible. (use common lang?)
+		Byte[] bodyarray;
+		bodyarray = body.toArray(new Byte[body.size()]);
+		byte[] result = new byte[body.size()];
+		for (int i = 0; i < body.size(); i++) {
+			result[i] = bodyarray[i];
+		}
+		return result;
 	}
 }

@@ -1,7 +1,9 @@
 package htmlclient;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URI;
@@ -22,14 +24,14 @@ public final class Main {
 		String command;
 		URI uri;
 		int port;
-		
+
 		if (args.length == 2) {
 			command = args[0];
 			uri = new URI("http://" + args[1]);
 			port = 80;
 		} else if (args.length == 3) {
 			command = args[0];
-			uri = new URI("http://" +  args[1]);
+			uri = new URI("http://" + args[1]);
 			port = Integer.parseInt(args[2]);
 		} else {
 			System.out.println("Not the correct input arguments!");
@@ -39,33 +41,24 @@ public final class Main {
 			return;
 		}
 		
-		switch (command) {
-		case "GET":			
-			break;
-		case "PUT":
-			break;
-		case "POST":
-			break;
-		default:
-			break;
+		HTTPSession session = new HTTPSession(uri.getHost(), port);
+		
+		if (!session.openConnection()) {
+			System.out.println("Connection failed");
+			return;
 		}
-
-		Socket clientSocket = new Socket(uri.getHost(), port);
-
-		PrintWriter toServer = new PrintWriter(clientSocket.getOutputStream());
-
-		BufferedReader fromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), Charset.forName("ISO-8859-1")));
-
-		toServer.print("GET " + uri.getPath() + " HTTP/1.1\r\n");
-		toServer.print("Host: " + uri.getHost() + "\r\n");
-		toServer.print("\r\n");
-		toServer.flush();
-
-		String line;
-		while ((line = fromServer.readLine()) != null) {
-			System.out.println(line);
+		
+		if(!session.sendCommand(command, uri.getPath())) {
+			System.out.println("Command failed");
+			return;
 		}
-		clientSocket.close();
-	}	
+		
+		if(!session.closeConnection()) {
+			System.out.println("Connection closed failed");
+			return;
+		}
+		
+		return;
+	}
 
 }
