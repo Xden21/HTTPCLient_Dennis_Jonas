@@ -43,9 +43,9 @@ public class HeadCommand extends Command {
 		}
 		System.out.println("");
 
-		ResponseHeader parsedHeader = parseHeader(header, false);
+		ResponseInfo parsedHeader = parseHeader(header, false);
 
-		setHeader(parsedHeader);
+		setResponseInfo(parsedHeader);
 		return parsedHeader.getConnectionClosed();
 	}
 
@@ -92,7 +92,7 @@ public class HeadCommand extends Command {
 	 * @param isFooter Indicates wether the given data is a footer or not
 	 * @return The data from the response header
 	 */
-	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
+	private ResponseInfo parseHeader(ArrayList<String> header, boolean isFooter) {
 		int start;
 		if (isFooter)
 			start = 0;
@@ -165,7 +165,7 @@ public class HeadCommand extends Command {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close");
 
-		return new ResponseHeader(code, message, chunked, contentLength, connectionclosed, type);
+		return new ResponseInfo(code, message, chunked, contentLength, connectionclosed, type);
 	}
 
 }

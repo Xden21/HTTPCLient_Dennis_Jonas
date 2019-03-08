@@ -4,8 +4,9 @@ import java.io.*;
 
 /**
  * An abstract class for an html command.
- * 
+ *
  * @author Dennis Debree
+ * @author Jonas Bertels
  */
 public abstract class Command {
 
@@ -67,9 +68,9 @@ public abstract class Command {
 	private InputStream reader;
 	
 	/**
-	 * The response header properties of this command.
+	 * The response info properties of this command.
 	 */
-	private ResponseHeader header;
+	private ResponseInfo info;
 
 	/*
 	 * Methods
@@ -150,23 +151,23 @@ public abstract class Command {
 	}
 	
 	/**
-	 * Sets the response header
-	 * @param header the new response header
+	 * Sets the response info
+	 * @param info the new response info
 	 * @throws IllegalArgumentException the response header was invalid.
 	 */
-	public void setHeader(ResponseHeader header) throws IllegalArgumentException{
-		if(header == null)
+	public void setResponseInfo(ResponseInfo info) throws IllegalArgumentException{
+		if(info == null)
 			throw new IllegalArgumentException();
 		
-		this.header = header;
+		this.info = info;
 	}
 	
 	/**
-	 * Gets the response header
-	 * @return the response header
+	 * Gets the response info
+	 * @return the response info
 	 */
-	public ResponseHeader getHeader() {
-		return header;
+	public ResponseInfo getResponseInfo() {
+		return info;
 	}
 
 	/**

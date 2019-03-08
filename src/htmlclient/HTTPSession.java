@@ -8,7 +8,7 @@ import java.net.*;
  * The html session class. This handles a connection to a host.
  * 
  * @author Dennis Debree
- *
+ * @author Jonas Bertels
  */
 public class HTTPSession {
 
@@ -74,7 +74,7 @@ public class HTTPSession {
 			this.opened = true;
 			return true;
 		} catch (Exception e) {
-			return true;
+			return false;
 		}
 	}
 
@@ -102,33 +102,42 @@ public class HTTPSession {
 	public boolean sendCommand(String command, String path) throws UnsupportedOperationException {
 		Command httpCommand = null;
 		boolean closeConnection = false;
-		if(!opened)
+		OutputStream outputStream;
+		InputStream inputStream;
+		if(!this.opened) {
+			System.out.println("Connection not open");
 			return false;
+		}
+		
 		try {
-			switch (command) {
-			case "HEAD":
-				httpCommand = new HeadCommand(getHost(), path, this.socket.getOutputStream(), this.socket.getInputStream());
-				break;
-			case "GET":
-				httpCommand = new GetCommand(getHost(), path, this.socket.getOutputStream(), this.socket.getInputStream());
-				break;
-			case "PUT":
-				break;
-			case "POST":
-				break;
-			default:
-				throw new UnsupportedOperationException("The given operation is not supported");
-			}
-		} catch (IOException e) {
-			System.out.println("Socket error, closing connection");
+			outputStream = socket.getOutputStream();
+
+			inputStream = socket.getInputStream();
+		} catch (IOException e1) {
+			System.out.println("Failed to get streams, closing connection");
 			closeConnection();
 			return false;
+		}
+			
+		switch (command) {
+		case "HEAD":
+			httpCommand = new HeadCommand(getHost(), path, outputStream, inputStream);
+			break;
+		case "GET":
+			httpCommand = new GetCommand(getHost(), path, outputStream, inputStream);
+			break;
+		case "PUT":
+			break;
+		case "POST":
+			break;
+		default:
+			throw new UnsupportedOperationException("The given operation is not supported");
 		}
 		
 		try {
 			closeConnection = httpCommand.executeCommand();
 		} catch (IOException e) {
-			System.out.println("Command failed, closing connection");
+			System.out.println("Command execution failed, closing connection");
 			closeConnection();
 			return false;
 		}
@@ -137,10 +146,83 @@ public class HTTPSession {
 			System.out.println("RESPONSE:");
 			System.out.println((String)httpCommand.getResponse());
 		}
-			
-		if(closeConnection)
-			closeConnection();
 		
+		if(httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
+			if(httpCommand.getResponseInfo().getStatusCode() == 200) {
+				try {
+					savePage((String) httpCommand.getResponse(), httpCommand.getResponseInfo());
+				} catch (FileNotFoundException e) {
+					System.out.println("Page save failed");
+				}
+			}
+		} else if (httpCommand.getResponseInfo().getContentType() != ContentType.UNKNOWN) {
+			if(httpCommand.getResponseInfo().getStatusCode() == 200) {
+				try {
+					saveResource((byte[]) httpCommand.getResponse(), httpCommand.getPath());
+				} catch (Exception ex) {
+					System.out.println("Resource save failed");
+				}
+			}
+		}
+		
+
+		if(closeConnection) {
+			closeConnection();
+			return true;
+		}
+		
+		// TODO Implement add blocker
+		
+		// Check for resource requests
+		while(httpCommand.getResponseInfo().hasResourceRequests()) {
+			ResourceRequest request = httpCommand.getResponseInfo().getNextResourceRequest();
+			try {
+				GetCommand requestCommand = new GetCommand(getHost(),"/" +  request.getPath(), outputStream, inputStream);
+				closeConnection = requestCommand.executeCommand();
+				if(requestCommand.getResponseInfo().getStatusCode() == 200) {
+					try {
+						saveResource((byte[]) requestCommand.getResponse(), requestCommand.getPath());
+					} catch (Exception ex) {
+						System.out.println("Resource save failed");
+					}
+				}
+				if(closeConnection) {
+					closeConnection();
+					return true;
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				System.out.println("Resource Command failed, closing connection");
+				closeConnection();
+				return false;
+			}
+		}
+		
+		System.out.println("Request finished");
 		return true;
+	}
+	
+	private void savePage(String page, ResponseInfo response) throws FileNotFoundException {
+		File dir = new File("pages/");
+		if (!dir.exists())
+			dir.mkdirs();
+
+		PrintWriter filewriter = new PrintWriter(
+				"pages/" + getHost() + "." + response.getContentType().getExtension());
+		filewriter.print(page);
+		filewriter.flush();
+		filewriter.close();
+	}
+	
+	private void saveResource(byte[] resource, String path) throws IOException, FileNotFoundException {
+		String dirpath = "pages/" + path.substring(1, path.lastIndexOf("/") + 1);
+		File dir = new File(dirpath);
+		if (!dir.exists())
+			dir.mkdirs();
+
+		FileOutputStream filewriter = new FileOutputStream("pages" + path);
+		filewriter.write(resource);
+		filewriter.flush();
+		filewriter.close();
 	}
 }

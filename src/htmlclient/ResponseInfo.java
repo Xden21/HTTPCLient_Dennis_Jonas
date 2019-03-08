@@ -1,14 +1,23 @@
 package htmlclient;
 
+import java.util.ArrayList;
+import java.util.EmptyStackException;
+import java.util.Stack;
+
 import javax.swing.text.AbstractDocument.Content;
 
-public class ResponseHeader {
+/**
+ * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
+ */
+public class ResponseInfo {
 
 	/*
 	 * Constructor
 	 */
 	
-	public ResponseHeader(int statusCode, String statusMessage, boolean chunked, int contentLength, boolean connectionClosed, ContentType contentType)
+	public ResponseInfo(int statusCode, String statusMessage, boolean chunked, int contentLength, boolean connectionClosed, ContentType contentType)
 			throws IllegalArgumentException {
 		if(contentLength < 0)
 			throw new IllegalArgumentException("Not a valid length");
@@ -18,6 +27,7 @@ public class ResponseHeader {
 		this.contentLength = contentLength;
 		this.connectionClosed = connectionClosed;
 		this.contentType = contentType;
+		this.resourceRequests = new Stack<ResourceRequest>();
 	}
 
 	/*
@@ -35,6 +45,8 @@ public class ResponseHeader {
 	private boolean connectionClosed;
 	
 	private ContentType contentType;
+	
+	private Stack<ResourceRequest> resourceRequests;
 	
 	/*
 	 * Methods
@@ -66,5 +78,21 @@ public class ResponseHeader {
 	
 	public ContentType getContentType() {
 		return contentType;
+	}
+	
+	public void registerResourceRequest(ResourceRequest request) {
+		if(request == null) {
+			throw new IllegalArgumentException("The given request is not valid");
+		}
+		
+		resourceRequests.push(request);
+	}
+	
+	public ResourceRequest getNextResourceRequest() throws EmptyStackException {		
+		return resourceRequests.pop();
+	}
+	
+	public boolean hasResourceRequests() {
+		return !resourceRequests.isEmpty();
 	}
 }

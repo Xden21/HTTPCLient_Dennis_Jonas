@@ -11,7 +11,9 @@ import java.nio.charset.Charset;
 
 /**
  * The main class, where the html client starts from.
+ *
  * @author Dennis Debree
+ * @author Jonas Bertels
  */
 public final class Main {
 

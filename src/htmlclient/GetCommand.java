@@ -26,6 +26,7 @@ import org.jsoup.select.*;
  * TODO More mime types?
  * 
  * @author Dennis Debree
+ * @author Jonas Bertels
  */
 public class GetCommand extends Command {
 
@@ -88,50 +89,20 @@ public class GetCommand extends Command {
 		}
 		System.out.println("");
 
-		ResponseHeader parsedHeader = parseHeader(header, false);
+		ResponseInfo parsedHeader = parseHeader(header, false);
 
-		setHeader(parsedHeader);
+		setResponseInfo(parsedHeader);
 
 		// Read the resonse
 		Object response = readResponse();
 
-		// Save response
-		// CASE: HTML page
-		if (parsedHeader.getContentType() == ContentType.HTML) {
-			setResponse(response);
+		setResponse(response);
+		
+		// If html, parse for getting resources.
+		if(parsedHeader.getContentType() == ContentType.HTML)
+			parseHTMLPage((String) response);
 
-			if (parsedHeader.getStatusCode() == 200) {
-				// save file
-				File dir = new File("pages/");
-				if (!dir.exists())
-					dir.mkdirs();
-
-				PrintWriter filewriter = new PrintWriter(
-						"pages/" + getHost() + "." + parsedHeader.getContentType().getExtension());
-				filewriter.print(response);
-				filewriter.flush();
-				filewriter.close();
-
-				// TODO parse html to find MIME data.
-				parseHTMLPage((String) response);
-			}
-		} else if (parsedHeader.getContentType() == ContentType.IMAGEJPG
-				|| parsedHeader.getContentType() == ContentType.IMAGEPNG
-				|| parsedHeader.getContentType() == ContentType.IMAGEGIF) {
-			setResponse(response);
-			if (parsedHeader.getStatusCode() == 200) {
-				String dirpath = "pages/" + getPath().substring(1, getPath().lastIndexOf("/") + 1);
-				File dir = new File(dirpath);
-				if (!dir.exists())
-					dir.mkdirs();
-
-				FileOutputStream filewriter = new FileOutputStream("pages" + getPath());
-				filewriter.write((byte[]) response);
-				filewriter.flush();
-				filewriter.close();
-			}
-		}
-
+		
 		return parsedHeader.getConnectionClosed();
 	}
 
@@ -146,7 +117,7 @@ public class GetCommand extends Command {
 	 * @param isFooter	Indicates wether the given data is a footer or not
 	 * @return			The data from the response header
 	 */
-	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
+	private ResponseInfo parseHeader(ArrayList<String> header, boolean isFooter) {
 		int start;
 		if (isFooter)
 			start = 0;
@@ -219,7 +190,7 @@ public class GetCommand extends Command {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close");
 
-		return new ResponseHeader(code, message, chunked, contentLength, connectionclosed, type);
+		return new ResponseInfo(code, message, chunked, contentLength, connectionclosed, type);
 	}
 
 	/**
@@ -244,12 +215,30 @@ public class GetCommand extends Command {
 
 			// For each path, do get request
 			for (String path : imagePaths) {
-				GetCommand imageGet = new GetCommand(getHost(), "/" + path, getWriter(), getReader());
-				try {
-					imageGet.executeCommand();
-				} catch (IOException e) {
-					System.out.println("Failed to get image");
+				//GetCommand imageGet = new GetCommand(getHost(), "/" + path, getWriter(), getReader());
+				//try {
+					//imageGet.executeCommand();
+				//} catch (IOException e) {
+				//	System.out.println("Failed to get image");
+				//}
+				
+				String typeString = path.substring(path.indexOf(".")+1);
+				ContentType type;
+				switch (typeString.toLowerCase()) {
+				case "jpg":
+					type = ContentType.IMAGEJPG;
+					break;
+				case "png":
+					type = ContentType.IMAGEPNG;
+					break;
+				case "gif":
+					type = ContentType.IMAGEGIF;
+					break;
+				default:
+					type = ContentType.UNKNOWN;
+					break;					
 				}
+				getResponseInfo().registerResourceRequest(new ResourceRequest(path, type));
 			}
 		}
 	}
@@ -267,19 +256,19 @@ public class GetCommand extends Command {
 	 */
 	private Object readResponse() throws IOException, IllegalResponseException {
 		// Check content type and if the response will be chunked
-		if (getHeader().getContentType() == ContentType.HTML) {
+		if (getResponseInfo().getContentType() == ContentType.HTML) {
 			String response = "";
-			if (getHeader().isChunked()) {
+			if (getResponseInfo().isChunked()) {
 				response = readChunkedPage();
 			} else {
 				response = readFullPage();
 			}
 			return response;
-		} else if (getHeader().getContentType() == ContentType.IMAGEJPG
-				|| getHeader().getContentType() == ContentType.IMAGEPNG
-				|| getHeader().getContentType() == ContentType.IMAGEGIF) {
+		} else if (getResponseInfo().getContentType() == ContentType.IMAGEJPG
+				|| getResponseInfo().getContentType() == ContentType.IMAGEPNG
+				|| getResponseInfo().getContentType() == ContentType.IMAGEGIF) {
 			byte[] response;
-			if (getHeader().isChunked()) {
+			if (getResponseInfo().isChunked()) {
 				response = readChunkedRaw();
 			} else {
 				response = readFullRaw();
@@ -345,10 +334,10 @@ public class GetCommand extends Command {
 			System.out.println(elem);
 		}
 		// Handle them
-		ResponseHeader parsedFooter = parseHeader(footer, true);
+		ResponseInfo parsedFooter = parseHeader(footer, true);
 		if (parsedFooter.getConnectionClosed()) // Possible that this is in footer? Check for other possible ones that
 												// matter to us.
-			getHeader().setConnectionClosed(true);
+			getResponseInfo().setConnectionClosed(true);
 
 		return body;
 	}
@@ -361,10 +350,10 @@ public class GetCommand extends Command {
 	 */
 	private String readFullPage() throws IOException {
 		InputStream reader = getReader();
-		byte[] buffer = new byte[getHeader().getContentLength()];
+		byte[] buffer = new byte[getResponseInfo().getContentLength()];
 		String body = "";
-		int count = reader.read(buffer, 0, getHeader().getContentLength());
-		int rest = getHeader().getContentLength() - count;
+		int count = reader.read(buffer, 0, getResponseInfo().getContentLength());
+		int rest = getResponseInfo().getContentLength() - count;
 		body += new String(buffer);
 		body.replaceAll("\0", "");
 		if (rest != 0) {
@@ -464,10 +453,10 @@ public class GetCommand extends Command {
 			System.out.println(elem);
 		}
 		// Handle them
-		ResponseHeader parsedFooter = parseHeader(footer, true);
+		ResponseInfo parsedFooter = parseHeader(footer, true);
 		if (parsedFooter.getConnectionClosed()) // Possible that this is in footer? Check for other possible ones that
 												// matter to us.
-			getHeader().setConnectionClosed(true);
+			getResponseInfo().setConnectionClosed(true);
 
 		// Java array to list support is terrible. (use common lang?)
 		Byte[] bodyarray;
@@ -488,9 +477,9 @@ public class GetCommand extends Command {
 	private byte[] readFullRaw() throws IOException {
 		InputStream reader = getReader();
 		ArrayList<Byte> body = new ArrayList<>();
-		byte[] buffer = new byte[getHeader().getContentLength()];
-		int count = reader.read(buffer, 0, getHeader().getContentLength());
-		int rest = getHeader().getContentLength() - count;
+		byte[] buffer = new byte[getResponseInfo().getContentLength()];
+		int count = reader.read(buffer, 0, getResponseInfo().getContentLength());
+		int rest = getResponseInfo().getContentLength() - count;
 		for (int i = 0; i < count; i++) {
 			body.add(buffer[i]);
 		}
