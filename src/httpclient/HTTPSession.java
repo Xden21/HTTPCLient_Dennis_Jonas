@@ -1,11 +1,11 @@
-package htmlclient;
+package httpclient;
 
 import java.util.*;
 import java.io.*;
 import java.net.*;
 
 /**
- * The html session class. This handles a connection to a host.
+ * The http session class. This handles a connection to a host.
  * 
  * @author Dennis Debree
  * @author Jonas Bertels
@@ -13,8 +13,10 @@ import java.net.*;
 public class HTTPSession {
 
 	/**
+	 * Creates a new http session.
 	 * 
-	 * @param host
+	 * @param host The host for this session
+	 * @param port The port for this session
 	 */
 	public HTTPSession(String host, int port) {
 		if (host == null || host == "")
@@ -65,8 +67,9 @@ public class HTTPSession {
 	}
 
 	/**
+	 * Opens the socket connection to the host.
 	 * 
-	 * @return
+	 * @return true of connection succeeded, false if it failed.
 	 */
 	public boolean openConnection() {
 		try {
@@ -79,8 +82,9 @@ public class HTTPSession {
 	}
 
 	/**
+	 * Close the socket connection to the host.
 	 * 
-	 * @return
+	 * @return True if closing succeeded, false if it failed.
 	 */
 	public boolean closeConnection() {
 		if (opened) {
@@ -95,9 +99,11 @@ public class HTTPSession {
 	}
 
 	/**
+	 * Sends the given command to the host and processes the response.
 	 * 
-	 * @param command
-	 * @param path
+	 * @param command The command to send
+	 * @param path The path for the command.
+	 * @throws UnsupportedOperationException The given command is unknown or not supported.
 	 */
 	public boolean sendCommand(String command, String path) throws UnsupportedOperationException {
 		Command httpCommand = null;
@@ -109,6 +115,7 @@ public class HTTPSession {
 			return false;
 		}
 		
+		// Gets the input and outputstreams.
 		try {
 			outputStream = socket.getOutputStream();
 
@@ -119,6 +126,7 @@ public class HTTPSession {
 			return false;
 		}
 			
+		// Create command
 		switch (command) {
 		case "HEAD":
 			httpCommand = new HeadCommand(getHost(), path, outputStream, inputStream);
@@ -134,6 +142,7 @@ public class HTTPSession {
 			throw new UnsupportedOperationException("The given operation is not supported");
 		}
 		
+		// Execute command
 		try {
 			closeConnection = httpCommand.executeCommand();
 		} catch (IOException e) {
@@ -142,11 +151,13 @@ public class HTTPSession {
 			return false;
 		}
 		
+		// Fetch response
 		if(httpCommand.getResponse() != null) {
 			System.out.println("RESPONSE:");
 			System.out.println((String)httpCommand.getResponse());
 		}
 		
+		// Save response to disk
 		if(httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
 			if(httpCommand.getResponseInfo().getStatusCode() == 200) {
 				try {
@@ -165,7 +176,7 @@ public class HTTPSession {
 			}
 		}
 		
-
+		// If host requested connection close, do so.
 		if(closeConnection) {
 			closeConnection();
 			return true;
@@ -175,12 +186,14 @@ public class HTTPSession {
 		
 		// Check for resource requests
 		while(httpCommand.getResponseInfo().hasResourceRequests()) {
+			// For each resource request, perform a get command.
 			ResourceRequest request = httpCommand.getResponseInfo().getNextResourceRequest();
 			try {
 				GetCommand requestCommand = new GetCommand(getHost(),"/" +  request.getPath(), outputStream, inputStream);
 				closeConnection = requestCommand.executeCommand();
 				if(requestCommand.getResponseInfo().getStatusCode() == 200) {
 					try {
+						// Save the resource to disk.
 						saveResource((byte[]) requestCommand.getResponse(), requestCommand.getPath());
 					} catch (Exception ex) {
 						System.out.println("Resource save failed");
@@ -202,6 +215,13 @@ public class HTTPSession {
 		return true;
 	}
 	
+	/**
+	 * Saves the given html page to disk.
+	 * 
+	 * @param page 		The html page to save.
+	 * @param response	The response info of the command that fetched the page.
+	 * @throws FileNotFoundException The file couldn't be saved.
+	 */
 	private void savePage(String page, ResponseInfo response) throws FileNotFoundException {
 		File dir = new File("pages/");
 		if (!dir.exists())
@@ -214,6 +234,14 @@ public class HTTPSession {
 		filewriter.close();
 	}
 	
+	/**
+	 * Saves the given dataset to disk.
+	 * 
+	 * @param resource The dataset to save.
+	 * @param path	   The path to save to, including file name and extension
+	 * @throws IOException	The file couldn't be written to.
+	 * @throws FileNotFoundException The file couldn't be opened or created.
+	 */
 	private void saveResource(byte[] resource, String path) throws IOException, FileNotFoundException {
 		String dirpath = "pages/" + path.substring(1, path.lastIndexOf("/") + 1);
 		File dir = new File(dirpath);

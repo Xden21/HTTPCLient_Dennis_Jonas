@@ -1,4 +1,4 @@
-package htmlclient;
+package httpclient;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 /**
@@ -20,20 +21,34 @@ public final class Main {
 	/**
 	 * The main function. this is the entry point of the program.
 	 * @param args:	The command line arguments of this program. There should be either 2 or 3.
-	 * @throws Exception
 	 */
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		String command;
 		URI uri;
 		int port;
 
 		if (args.length == 2) {
 			command = args[0];
-			uri = new URI("http://" + args[1]);
+			try {
+				String uriStr = args[1];
+				if(uriStr.indexOf("/") == -1)
+					uriStr = uriStr + "/";
+				uri = new URI("http://" + uriStr);
+			} catch (URISyntaxException e) {
+				System.out.println("Given URI is in wrong format.");
+				return;
+			}
 			port = 80;
 		} else if (args.length == 3) {
 			command = args[0];
-			uri = new URI("http://" + args[1]);
+			try {
+				if(args[1].indexOf("/") == -1)
+					args[1] = args[1] + "/";
+				uri = new URI("http://" + args[1]);
+			} catch (URISyntaxException e) {
+				System.out.println("Given URI is in wrong format.");
+				return;
+			}
 			port = Integer.parseInt(args[2]);
 		} else {
 			System.out.println("Not the correct input arguments!");

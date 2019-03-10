@@ -1,4 +1,4 @@
-package htmlclient;
+package httpclient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,8 +8,23 @@ import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * A class for http HEAD commands.
+ * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
+ */
 public class HeadCommand extends Command {
 
+	/**
+	 * Creates a new head command.
+	 * 
+	 * @param host 		The host for this HeadCommand
+	 * @param path  	The path of this HeadCommand
+	 * @param writer 	The writer for this HeadCommand
+	 * @param reader 	The reader for this HeadCommand
+	 * @effect 			A new Command is constructed
+	 */
 	public HeadCommand(String host, String path, OutputStream writer, InputStream reader)
 			throws IllegalArgumentException {
 		super(host, path, writer, reader);

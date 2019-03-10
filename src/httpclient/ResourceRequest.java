@@ -1,4 +1,4 @@
-package htmlclient;
+package httpclient;
 
 /**
  * A class for defining a MIME resource request.

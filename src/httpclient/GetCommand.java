@@ -1,4 +1,4 @@
-package htmlclient;
+package httpclient;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,7 +21,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.*;
 
 /**
- * A class for html GET commands.
+ * A class for http GET commands.
  * 
  * TODO More mime types?
  * 
@@ -197,7 +197,7 @@ public class GetCommand extends Command {
 	 * Parses a given html page, to check for MIME resources to get.
 	 * 
 	 * @param page	The page to parse.
-	 * @effect		Downloaded all embedded pictures.
+	 * @effect		All embedded pictures where downloaded.
 	 */
 	private void parseHTMLPage(String page) {
 		// Parse into well formed document for parsing.
@@ -213,15 +213,8 @@ public class GetCommand extends Command {
 				}
 			}
 
-			// For each path, do get request
+			// For each path, make resource request.
 			for (String path : imagePaths) {
-				//GetCommand imageGet = new GetCommand(getHost(), "/" + path, getWriter(), getReader());
-				//try {
-					//imageGet.executeCommand();
-				//} catch (IOException e) {
-				//	System.out.println("Failed to get image");
-				//}
-				
 				String typeString = path.substring(path.indexOf(".")+1);
 				ContentType type;
 				switch (typeString.toLowerCase()) {
