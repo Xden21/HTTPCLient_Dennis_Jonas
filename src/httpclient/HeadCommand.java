@@ -1,4 +1,4 @@
-package htmlclient;
+package httpclient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,8 +8,23 @@ import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * A class for http HEAD commands.
+ * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
+ */
 public class HeadCommand extends Command {
 
+	/**
+	 * Creates a new head command.
+	 * 
+	 * @param host 		The host for this HeadCommand
+	 * @param path  	The path of this HeadCommand
+	 * @param writer 	The writer for this HeadCommand
+	 * @param reader 	The reader for this HeadCommand
+	 * @effect 			A new Command is constructed
+	 */
 	public HeadCommand(String host, String path, OutputStream writer, InputStream reader)
 			throws IllegalArgumentException {
 		super(host, path, writer, reader);
@@ -43,9 +58,9 @@ public class HeadCommand extends Command {
 		}
 		System.out.println("");
 
-		ResponseHeader parsedHeader = parseHeader(header, false);
+		ResponseInfo parsedHeader = parseHeader(header, false);
 
-		setHeader(parsedHeader);
+		setResponseInfo(parsedHeader);
 		return parsedHeader.getConnectionClosed();
 	}
 
@@ -92,7 +107,7 @@ public class HeadCommand extends Command {
 	 * @param isFooter Indicates wether the given data is a footer or not
 	 * @return The data from the response header
 	 */
-	private ResponseHeader parseHeader(ArrayList<String> header, boolean isFooter) {
+	private ResponseInfo parseHeader(ArrayList<String> header, boolean isFooter) {
 		int start;
 		if (isFooter)
 			start = 0;
@@ -165,7 +180,7 @@ public class HeadCommand extends Command {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close");
 
-		return new ResponseHeader(code, message, chunked, contentLength, connectionclosed, type);
+		return new ResponseInfo(code, message, chunked, contentLength, connectionclosed, type);
 	}
 
 }

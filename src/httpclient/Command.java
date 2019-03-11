@@ -1,11 +1,12 @@
-package htmlclient;
+package httpclient;
 
 import java.io.*;
 
 /**
- * An abstract class for an html command.
- * 
+ * An abstract class for an http command.
+ *
  * @author Dennis Debree
+ * @author Jonas Bertels
  */
 public abstract class Command {
 
@@ -54,7 +55,7 @@ public abstract class Command {
 	/**
 	 * The response to this command.
 	 */
-	private String response;
+	private Object response;
 
 	/**
 	 * The writer to the host.
@@ -65,6 +66,11 @@ public abstract class Command {
 	 * The reader from the host.
 	 */
 	private InputStream reader;
+	
+	/**
+	 * The response info properties of this command.
+	 */
+	private ResponseInfo info;
 
 	/*
 	 * Methods
@@ -109,7 +115,7 @@ public abstract class Command {
 	 * 
 	 * @return response of this command.
 	 */
-	public String getResponse() {
+	public Object getResponse() {
 		return response;
 	}
 
@@ -120,7 +126,7 @@ public abstract class Command {
 	 * @post The given response is the response of this command.
 	 * @throws IllegalArgumentException The given response is not valid.
 	 */
-	protected void setResponse(String response) throws IllegalArgumentException {
+	protected void setResponse(Object response) throws IllegalArgumentException {
 		if (response == null)
 			throw new IllegalArgumentException("The given response is not valid.");
 		this.response = response;
@@ -143,12 +149,33 @@ public abstract class Command {
 	public InputStream getReader() {
 		return reader;
 	}
+	
+	/**
+	 * Sets the response info
+	 * @param info the new response info
+	 * @throws IllegalArgumentException the response header was invalid.
+	 */
+	public void setResponseInfo(ResponseInfo info) throws IllegalArgumentException{
+		if(info == null)
+			throw new IllegalArgumentException();
+		
+		this.info = info;
+	}
+	
+	/**
+	 * Gets the response info
+	 * @return the response info
+	 */
+	public ResponseInfo getResponseInfo() {
+		return info;
+	}
 
 	/**
 	 * Executes this command.
 	 * 
 	 * @post The response of this command is the new response.
 	 * @throws IOException The reading of the response failed.
+	 * @return boolean that indicates wether or not to close the connection.
 	 */
-	public abstract void executeCommand() throws IOException;
+	public abstract boolean executeCommand() throws IOException;
 }
