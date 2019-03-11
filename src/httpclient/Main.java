@@ -1,6 +1,7 @@
 package httpclient;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -20,9 +21,11 @@ public final class Main {
 
 	/**
 	 * The main function. this is the entry point of the program.
+	 * Takes a command line input and parses it into usable parts.
+	 * 
 	 * @param args:	The command line arguments of this program. There should be either 2 or 3.
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args)  {
 		String command;
 		URI uri;
 		int port;
@@ -42,9 +45,10 @@ public final class Main {
 		} else if (args.length == 3) {
 			command = args[0];
 			try {
-				if(args[1].indexOf("/") == -1)
-					args[1] = args[1] + "/";
-				uri = new URI("http://" + args[1]);
+				String uriStr = args[1];
+				if(uriStr.indexOf("/") == -1)
+					uriStr = uriStr + "/";
+				uri = new URI("http://" + uriStr);
 			} catch (URISyntaxException e) {
 				System.out.println("Given URI is in wrong format.");
 				return;
@@ -64,10 +68,17 @@ public final class Main {
 			System.out.println("Connection failed");
 			return;
 		}
-		
+		try {
 		if(!session.sendCommand(command, uri.getPath())) {
 			System.out.println("Command failed");
 			return;
+		}
+		}
+		catch(UnsupportedOperationException e1) {
+			System.out.println(e1.getMessage());
+		}
+		catch(IOException e2) {
+			System.out.println(e2.getMessage());
 		}
 		
 		if(!session.closeConnection()) {

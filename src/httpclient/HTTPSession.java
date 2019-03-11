@@ -104,8 +104,9 @@ public class HTTPSession {
 	 * @param command The command to send
 	 * @param path The path for the command.
 	 * @throws UnsupportedOperationException The given command is unknown or not supported.
+	 * @throws IOException 
 	 */
-	public boolean sendCommand(String command, String path) throws UnsupportedOperationException {
+	public boolean sendCommand(String command, String path) throws UnsupportedOperationException, IOException {
 		Command httpCommand = null;
 		boolean closeConnection = false;
 		OutputStream outputStream;
@@ -135,8 +136,16 @@ public class HTTPSession {
 			httpCommand = new GetCommand(getHost(), path, outputStream, inputStream);
 			break;
 		case "PUT":
+			System.out.println("Please enter the body here:");
+			BufferedReader putReader = new BufferedReader(new InputStreamReader(System.in));
+			String putString = putReader.readLine();
+			httpCommand = new PutCommand(getHost(), path, outputStream, inputStream, putString);
 			break;
 		case "POST":
+			System.out.println("Please enter the body here:");
+			BufferedReader postReader = new BufferedReader(new InputStreamReader(System.in));
+			String postString = postReader.readLine();
+			httpCommand = new PutCommand(getHost(), path, outputStream, inputStream, postString);
 			break;
 		default:
 			throw new UnsupportedOperationException("The given operation is not supported");
