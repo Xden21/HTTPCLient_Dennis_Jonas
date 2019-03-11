@@ -33,11 +33,11 @@ public class GetCommand extends Command {
 	/**
 	 * Constructs a new GetCommand.
 	 * 
-	 * @param host 		The host for this GetCommand
-	 * @param path  	The path of this GetCommand
-	 * @param writer 	The writer for this GetCommand
-	 * @param reader 	The reader for this GetCommand
-	 * @effect 			A new Command is constructed
+	 * @param host   The host for this GetCommand
+	 * @param path   The path of this GetCommand
+	 * @param writer The writer for this GetCommand
+	 * @param reader The reader for this GetCommand
+	 * @effect A new Command is constructed
 	 */
 	public GetCommand(String host, String path, OutputStream writer, InputStream reader)
 			throws IllegalArgumentException {
@@ -53,7 +53,8 @@ public class GetCommand extends Command {
 	@Override
 	public boolean executeCommand() throws IOException {
 		sendRequest();
-		return processResponse();	}
+		return processResponse();
+	}
 
 	/**
 	 * Sends the GET request.
@@ -73,7 +74,7 @@ public class GetCommand extends Command {
 	 * @return boolean that indicates wether or not to close the connection.
 	 */
 	private boolean processResponse() throws IOException {
-		
+
 		// Read the header
 		ArrayList<String> header = new ArrayList<>();
 		String line = readLine();
@@ -83,7 +84,7 @@ public class GetCommand extends Command {
 		}
 
 		System.out.println("HEADER:");
-		
+
 		for (String elem : header) {
 			System.out.println(elem);
 		}
@@ -97,12 +98,11 @@ public class GetCommand extends Command {
 		Object response = readResponse();
 
 		setResponse(response);
-		
+
 		// If html, parse for getting resources.
-		if(parsedHeader.getContentType() == ContentType.HTML)
+		if (parsedHeader.getContentType() == ContentType.HTML)
 			parseHTMLPage((String) response);
 
-		
 		return parsedHeader.getConnectionClosed();
 	}
 
@@ -113,9 +113,9 @@ public class GetCommand extends Command {
 	/**
 	 * Parsed the header or footer of the response to get the desired info.
 	 * 
-	 * @param header	The header or footer to parse
-	 * @param isFooter	Indicates wether the given data is a footer or not
-	 * @return			The data from the response header
+	 * @param header   The header or footer to parse
+	 * @param isFooter Indicates wether the given data is a footer or not
+	 * @return The data from the response header
 	 */
 	private ResponseInfo parseHeader(ArrayList<String> header, boolean isFooter) {
 		int start;
@@ -123,7 +123,7 @@ public class GetCommand extends Command {
 			start = 0;
 		else
 			start = 1;
-		
+
 		// Put header key values in hashmap
 		HashMap<String, String> headerMap = new HashMap<>();
 		for (int i = start; i < header.size(); i++) {
@@ -137,7 +137,7 @@ public class GetCommand extends Command {
 		}
 		int code = 0;
 		String message = "";
-		
+
 		// Parse first line if header
 		if (!isFooter) {
 			String statusline = header.get(0);
@@ -188,7 +188,7 @@ public class GetCommand extends Command {
 		}
 
 		if (headerMap.containsKey("connection"))
-			connectionclosed = (headerMap.get("connection") == "close");
+			connectionclosed = (headerMap.get("connection") == "close" || headerMap.get("connection") == "Closed");
 
 		return new ResponseInfo(code, message, chunked, contentLength, connectionclosed, type);
 	}
@@ -196,26 +196,24 @@ public class GetCommand extends Command {
 	/**
 	 * Parses a given html page, to check for MIME resources to get.
 	 * 
-	 * @param page	The page to parse.
-	 * @effect		All embedded pictures where downloaded.
+	 * @param page The page to parse.
+	 * @effect All embedded pictures where downloaded.
 	 */
 	private void parseHTMLPage(String page) {
 		// Parse into well formed document for parsing.
 		Document htmlpage = Jsoup.parse(page);
 		// Search documents for image tags.
-		Elements imageTags = htmlpage.getElementsByTag("img"); 
+		Elements imageTags = htmlpage.getElementsByTag("img");
 		ArrayList<String> imagePaths = new ArrayList<>();
 		if (!imageTags.isEmpty()) {
 			for (Element imageTag : imageTags) {
 				String path = imageTag.attr("src");
-				if (!path.contains("http")) {
-					imagePaths.add(path);
-				}
+				imagePaths.add(path);
 			}
 
 			// For each path, make resource request.
 			for (String path : imagePaths) {
-				String typeString = path.substring(path.indexOf(".")+1);
+				String typeString = path.substring(path.lastIndexOf(".") + 1);
 				ContentType type;
 				switch (typeString.toLowerCase()) {
 				case "jpg":
@@ -229,7 +227,7 @@ public class GetCommand extends Command {
 					break;
 				default:
 					type = ContentType.UNKNOWN;
-					break;					
+					break;
 				}
 				getResponseInfo().registerResourceRequest(new ResourceRequest(path, type));
 			}
@@ -244,8 +242,8 @@ public class GetCommand extends Command {
 	 * Reads the response of the host.
 	 * 
 	 * @returnThe response of the host.
-	 * @throws IOException	The read from the host failed.
-	 * @throws IllegalResponseException	The response was mallformed.
+	 * @throws IOException              The read from the host failed.
+	 * @throws IllegalResponseException The response was mallformed.
 	 */
 	private Object readResponse() throws IOException, IllegalResponseException {
 		// Check content type and if the response will be chunked
@@ -275,7 +273,7 @@ public class GetCommand extends Command {
 	/**
 	 * Reads the response page thats in a chunked format.
 	 * 
-	 * @return	The response page from the host
+	 * @return The response page from the host
 	 * @throws IOException The read from the host failed.
 	 */
 	private String readChunkedPage() throws IOException {
@@ -293,9 +291,9 @@ public class GetCommand extends Command {
 					String chunk;
 					byte[] buffer = new byte[amount];
 					int count = reader.read(buffer, 0, amount);
-					
+
 					int rest = amount - count;
-					
+
 					chunk = new String(buffer);
 					chunk = chunk.replaceAll("\0", "");
 					while (rest != 0) {
@@ -338,8 +336,8 @@ public class GetCommand extends Command {
 	/**
 	 * Reads the response page from the host that is formatted in one part.
 	 * 
-	 * @return	The response page from the host
-	 * @throws IOException	The read from the host failed.
+	 * @return The response page from the host
+	 * @throws IOException The read from the host failed.
 	 */
 	private String readFullPage() throws IOException {
 		InputStream reader = getReader();
