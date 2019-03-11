@@ -1,23 +1,23 @@
-package htmlclient;
+package httpclient;
 
 /**
- * A class for the HTML Put command implementation
+ * A class for the HTML POST command implementation
  *
  * 
  */
 
-public class PutCommand extends Command {
+public class PostCommand extends Command {
 
 	/**
-	 * Constructs a new PutCommand.
+	 * Constructs a new PostCommand.
 	 *
-	 * @param host 		The host for this PutCommand
-	 * @param path  	The path of this PutCommand
-	 * @param writer 	The writer for this PutCommand
-	 * @param reader 	The reader for this PutCommand
+	 * @param host 		The host for this PostCommand
+	 * @param path  	The path of this PostCommand
+	 * @param writer 	The writer for this PostCommand
+	 * @param reader 	The reader for this PostCommand
 	 * @effect 			A new Command is constructed
 	 */
-	public PutCommand(String host, String path, OutputStream writer, InputStream reader) 
+	public PostCommand(String host, String path, OutputStream writer, InputStream reader)
 			throws IllegalArgumentException {
 		super(host, path, writer, reader);
 	}
@@ -35,11 +35,11 @@ public class PutCommand extends Command {
 	}
 
 	/**
-	 * Sends the PUT request.
+	 * Sends the Post request.
 	 */
 	private void sendRequest() {
 		PrintWriter writer = new PrintWriter(getWriter());
-		writer.print("PUT " + getPath() + " HTTP/1.1\r\n");
+		writer.print("Post " + getPath() + " HTTP/1.1\r\n");
 		writer.print("Host: " + getHost() + "\r\n");
 		writer.print("\r\n");
 		writer.flush();
