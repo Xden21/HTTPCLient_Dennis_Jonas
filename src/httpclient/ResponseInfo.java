@@ -178,4 +178,14 @@ public class ResponseInfo {
 	public boolean hasResourceRequests() {
 		return !resourceRequests.isEmpty();
 	}
+	
+	/**
+	 * Replace the current resource stack with the given resource stack
+	 * @param resourceStack
+	 * @return
+	 */
+	
+	public void replaceStack(Stack<ResourceRequest> resourceStack) {
+		resourceRequests = (Stack<ResourceRequest>) resourceStack.clone();
+	}
 }

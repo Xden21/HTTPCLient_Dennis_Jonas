@@ -44,6 +44,7 @@ public class PostCommand extends Command {
 		sendRequest();
 		// Read the header
 		ResponseInfo info = parseHeader(getHeaderList(), false);
+		setResponseInfo(info);
 		System.out.print("BODY:");
 		System.out.print(getBody(info.getContentLength()));
 		return info.getConnectionClosed();

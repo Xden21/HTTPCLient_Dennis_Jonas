@@ -44,6 +44,7 @@ public class PutCommand extends Command {
 		sendRequest();
 		// Read the header
 		ResponseInfo info = parseHeader(getHeaderList(), false);
+		setResponseInfo(info);
 		System.out.print("BODY:");
 		System.out.print(getBody(info.getContentLength()));
 		return info.getConnectionClosed();
@@ -69,8 +70,6 @@ public class PutCommand extends Command {
 	public String getContentLength() {
 		return Integer.toString(input.length());
 	}
-	
-
 	
 	
 	
