@@ -36,6 +36,7 @@ public class HttpServer {
 	 */
 	public void Start() throws IOException {
 		while(true) {
+			System.out.println("Server started");
 			Socket incomingConnection = this.socket.accept();
 			if(incomingConnection != null) {
 				HttpServerSession session = new HttpServerSession(incomingConnection, this);
@@ -53,9 +54,5 @@ public class HttpServer {
 		for(int i = currentSessions.size() - 1; i >= 0; i--) {
 			currentSessions.get(i).close();
 		}
-	}
-	
-	public static void main(String[] args) {
-		HttpServer server = new HttpServer(5000);
-	}
+	}	
 }

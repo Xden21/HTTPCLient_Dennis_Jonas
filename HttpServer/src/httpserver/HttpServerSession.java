@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.BufferOverflowException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.management.StandardEmitterMBean;
+
 public class HttpServerSession extends Thread {
 
 	/**
@@ -35,7 +38,7 @@ public class HttpServerSession extends Thread {
 	private boolean terminate;
 
 	private HttpServer server;
-	
+
 	/**
 	 * 
 	 * @param socket
@@ -44,8 +47,9 @@ public class HttpServerSession extends Thread {
 		if (socket == null) {
 			throw new IllegalArgumentException("Given socket is not valid");
 		}
-		if(server == null)
+		if (server == null)
 			throw new IllegalArgumentException("Given server is not valid");
+		this.socket = socket;
 		this.terminate = false;
 		this.server = server;
 	}
@@ -55,12 +59,6 @@ public class HttpServerSession extends Thread {
 	 */
 	@Override
 	public void run() {
-		// Read until header found.
-		// Parse header
-		// case: GET => send requested uri
-		// case: HEAD => send head of requested uri
-		// case: POST read body and append to file or create & send response header
-		// case: PUT read body and save to new file & send response header
 		InputStream input;
 		OutputStream output;
 		try {
@@ -71,7 +69,7 @@ public class HttpServerSession extends Thread {
 		} catch (IOException e) {
 			System.out.println("Failed to get streams");
 			return;
-		}	
+		}
 
 		while (!terminate) {
 			try {
@@ -82,35 +80,40 @@ public class HttpServerSession extends Thread {
 					headerLines.add(line);
 					line = readLine(input);
 				}
+				if (!headerLines.isEmpty()) {
+					System.out.println("HEADER:");
+					for(String locline : headerLines)
+						System.out.println(locline);
+					System.out.println("");
+					// Parse request header
+					RequestInfo info = parseHeader(headerLines);
 
-				// Parse request header
-				RequestInfo info = parseHeader(headerLines);
-
-				if (info.IsBadRequest()) {
-					// Send bad request
-					byte[] resp = "The request was mallformed".getBytes("UTF_8");
-					SendResponse(output, ResponseCode.BAD_REQUEST, "text/plain", resp, resp.length, false);
-				} else {
-					long size;
-					switch (info.getCommand()) {
-					case "HEAD":
-						handleOutput(info, output, true);
-						break;
-					case "GET":
-						handleOutput(info, output, false);
-						break;
-					case "POST":
-						handeInput(info, output, input, false);
-						break;
-					case "PUT":
-						handeInput(info, output, input, true);
-						break;
-					default:
-						break;
-					}
-					if (info.getConnectionClose()) {
-						// Close this socket.
-						close();
+					if (info.IsBadRequest()) {
+						// Send bad request
+						byte[] resp = "The request was mallformed".getBytes();
+						SendResponse(output, ResponseCode.BAD_REQUEST, "text/plain", resp, resp.length, false);
+					} else {
+						long size;
+						switch (info.getCommand()) {
+						case "HEAD":
+							handleOutput(info, output, true);
+							break;
+						case "GET":
+							handleOutput(info, output, false);
+							break;
+						case "POST":
+							handeInput(info, output, input, false);
+							break;
+						case "PUT":
+							handeInput(info, output, input, true);
+							break;
+						default:
+							break;
+						}
+						if (info.getConnectionClose()) {
+							// Close this socket.
+							close();
+						}
 					}
 				}
 
@@ -139,7 +142,7 @@ public class HttpServerSession extends Thread {
 		// Put header key values in hashmap
 		HashMap<String, String> headerMap = new HashMap<>();
 		for (int i = 1; i < header.size(); i++) {
-			String[] pair = header.get(i).split(":");
+			String[] pair = header.get(i).split(":", 2);
 			pair[0] = pair[0].toLowerCase();
 			for (int j = 0; j < pair.length; j++) {
 				pair[j] = pair[j].trim();
@@ -147,8 +150,9 @@ public class HttpServerSession extends Thread {
 
 			headerMap.put(pair[0], pair[1]);
 		}
-		// Valid standard values, if parsing if first line failes, these will be used
-		// but request will be bad.
+
+		// Valid standard values, if parsing the first line fails, these will be used
+		// but request will be flagged as bad.
 		String command = "HEAD";
 		String path = "/";
 		boolean isBadRequest = false;
@@ -159,12 +163,13 @@ public class HttpServerSession extends Thread {
 			command = requestLine.substring(0, requestLine.indexOf(" "));
 			if (!RequestInfo.isValidCommand(command))
 				isBadRequest = true;
-			path = requestLine.substring(requestLine.indexOf(" ") + 1, requestLine.indexOf(" "));
+			requestLine = requestLine.substring(requestLine.indexOf(" ") + 1);
+			path = requestLine.substring(0, requestLine.indexOf(" "));
 			if (path.indexOf("/") != 0)
 				isBadRequest = true;
 
 			String http = requestLine.substring(requestLine.lastIndexOf(" ") + 1);
-			if (!http.equals("HTTP/1.1\r\n"))
+			if (!http.equals("HTTP/1.1"))
 				isBadRequest = true;
 		} catch (Exception e) {
 			isBadRequest = true;
@@ -222,7 +227,7 @@ public class HttpServerSession extends Thread {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close" || headerMap.get("connection") == "Closed");
 
-		return new RequestInfo(command, path, date, ifModifiedSince, connectionclosed, isBadRequest, type);
+		return new RequestInfo(command, path, date, ifModifiedSince, connectionclosed, isBadRequest, type, contentLength);
 	}
 
 	/**
@@ -235,9 +240,12 @@ public class HttpServerSession extends Thread {
 	 */
 	private void handleOutput(RequestInfo info, OutputStream writer, boolean headonly)
 			throws UnsupportedEncodingException, IOException {
-		long size = getFileSize(info.getPath());
+		long size = -1;
+		try {
+			size = getFileSize(info.getPath());
+		} catch (IllegalArgumentException ex) {		}
 		if (size < 0) {
-			byte[] resp = "File not found".getBytes("UTF_8");
+			byte[] resp = "File not found".getBytes();
 			SendResponse(writer, ResponseCode.NOT_FOUND, "text/plain", resp, resp.length, false);
 		} else {
 			if (info.getModifiedSince() != "") {
@@ -252,7 +260,8 @@ public class HttpServerSession extends Thread {
 								true);
 					} else {
 						byte[] body = readFile(info.getPath());
-
+						if(body.length != size)
+							System.out.println("Size error!!");
 						SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), body, size,
 								false);
 					}
@@ -265,7 +274,8 @@ public class HttpServerSession extends Thread {
 					SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), null, size, true);
 				} else {
 					byte[] body = readFile(info.getPath());
-
+					if(body.length != size)
+						System.out.println("Size error!!");
 					SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), body, size, false);
 				}
 			}
@@ -289,7 +299,7 @@ public class HttpServerSession extends Thread {
 			for (int i = 0; i < count; i++) {
 				body.add(buffer[i]);
 			}
-			if (rest != 0) {
+			while (rest != 0) {
 				buffer = new byte[rest];
 				count = reader.read(buffer, 0, rest);
 				for (int i = 0; i < count; i++) {
@@ -310,22 +320,21 @@ public class HttpServerSession extends Thread {
 
 		} catch (Exception e) {
 			// Send server error
-			byte[] res = "Data write failed".getBytes("UTF_8");
+			byte[] res = "Data write failed".getBytes();
 			SendResponse(writer, ResponseCode.SERVER_ERROR, "text/plain", res, res.length, false);
 			return;
 		}
 
 		// Send response
 		if (newFile) {
-			byte[] res = "A new file was created".getBytes("UTF_8");
+			byte[] res = "A new file was created".getBytes();
 			SendResponse(writer, ResponseCode.CREATED, "text/plain", res, res.length, false);
 		} else {
-			byte[] res = "Data succesfully appended".getBytes("UTF_8");
+			byte[] res = "Data succesfully appended".getBytes();
 			SendResponse(writer, ResponseCode.SUCCESS, "text/plain", res, res.length, false);
 		}
 	}
 
-	
 	/**
 	 * 
 	 * @param stream
@@ -338,18 +347,18 @@ public class HttpServerSession extends Thread {
 	 */
 	private void SendResponse(OutputStream stream, ResponseCode code, String contentType, byte[] body, long bodylength,
 			boolean headOnly) throws UnsupportedEncodingException, IOException {
-		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+		ZonedDateTime now = ZonedDateTime.now(ZoneId.of("GMT"));
 		String date = now.format(DateTimeFormatter.RFC_1123_DATE_TIME);
 		stream.write(("HTTP/1.1 " + Integer.toString(code.getCode()) + " " + code.getMessage() + "\r\n")
-				.getBytes("US_ASCII"));
-		stream.write(("Date: " + date + "\r\n").getBytes("US_ASCII"));
+				.getBytes(Charset.forName("US-ASCII")));
+		stream.write(("Date: " + date + "\r\n").getBytes(Charset.forName("US-ASCII")));
 		if (body != null || headOnly) {
-			stream.write(("Content-Type: " + contentType + "\r\n").getBytes("US_ASCII"));
-			stream.write(("Content-Length: " + bodylength + "\r\n").getBytes("US_ASCII"));
+			stream.write(("Content-Type: " + contentType + "\r\n").getBytes(Charset.forName("US-ASCII")));
+			stream.write(("Content-Length: " + Long.toString(bodylength) + "\r\n").getBytes(Charset.forName("US-ASCII")));
 		}
-		stream.write("\r\n".getBytes("US_ASCII"));
+		stream.write("\r\n".getBytes(Charset.forName("US-ASCII")));
 		if (body != null)
-			stream.write(body);
+			stream.write(body, 0, (int)bodylength);
 	}
 
 	/**
@@ -367,9 +376,9 @@ public class HttpServerSession extends Thread {
 		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 		String date = now.format(DateTimeFormatter.RFC_1123_DATE_TIME);
 		stream.write(("HTTP/1.1 " + Integer.toString(code.getCode()) + " " + code.getMessage() + "\r\n")
-				.getBytes("US_ASCII"));
-		stream.write(("Date: " + date + "\r\n").getBytes("US_ASCII"));
-		stream.write("\r\n".getBytes("US_ASCII"));
+				.getBytes(Charset.forName("US-ASCII")));
+		stream.write(("Date: " + date + "\r\n").getBytes(Charset.forName("US-ASCII")));
+		stream.write("\r\n".getBytes(Charset.forName("US-ASCII")));
 	}
 
 	/**
@@ -424,12 +433,12 @@ public class HttpServerSession extends Thread {
 	 * @throws FileNotFoundException The file couldn't be opened or created.
 	 */
 	private void saveResource(byte[] data, String path, boolean append) throws IOException, FileNotFoundException {
-		String dirpath = "pages/" + path.substring(1, path.lastIndexOf("/") + 1);
+		String dirpath = "webpage/" + path.substring(1, path.lastIndexOf("/") + 1);
 		File dir = new File(dirpath);
 		if (!dir.exists())
 			dir.mkdirs();
 
-		FileOutputStream filewriter = new FileOutputStream("pages" + path, append);
+		FileOutputStream filewriter = new FileOutputStream("webpage" + path, append);
 		filewriter.write(data);
 		filewriter.flush();
 		filewriter.close();
@@ -441,9 +450,9 @@ public class HttpServerSession extends Thread {
 	 * @return
 	 */
 	private long getFileSize(String path) {
-		if (path == null || path.indexOf("/") == 0)
-			throw new IllegalArgumentException("given file path is not available");
-		File file = new File("webpage/" + path);
+		if (path == null || path.indexOf("/") != 0)
+			throw new IllegalArgumentException("given file path is not valid");
+		File file = new File("webpage" + path);
 		if (!file.exists() || !file.isFile())
 			return -1;
 		return file.length();
@@ -454,10 +463,10 @@ public class HttpServerSession extends Thread {
 	 * @param path
 	 * @return
 	 */
-	private ZonedDateTime getFileLastModified(String path) {
-		if (path == null || path.indexOf("/") == 0)
-			throw new IllegalArgumentException("given file path is not available");
-		File file = new File("webpage/" + path);
+	private ZonedDateTime getFileLastModified(String path) throws IllegalArgumentException {
+		if (path == null || path.indexOf("/") != 0)
+			throw new IllegalArgumentException("given file path is not valid");
+		File file = new File("webpage" + path);
 		if (!file.exists() || !file.isFile())
 			return ZonedDateTime.now();
 
@@ -467,16 +476,16 @@ public class HttpServerSession extends Thread {
 	}
 
 	private byte[] readFile(String path) throws IOException {
-		if (path == null || path.indexOf("/") == 0)
-			throw new IllegalArgumentException("given file path is not available");
+		if (path == null || path.indexOf("/") != 0)
+			throw new IllegalArgumentException("given file path is not valid");
 
-		return Files.readAllBytes(Path.of("webpage", path));
+		return Files.readAllBytes(Path.of("webpage" + path));
 	}
 
 	private String getFileContentType(String path) {
-		if (path == null || path.indexOf("/") == 0)
-			throw new IllegalArgumentException("given file path is not available");
-		File file = new File("webpage/" + path);
+		if (path == null || path.indexOf("/") != 0)
+			throw new IllegalArgumentException("given file path is not valid");
+		File file = new File("webpage" + path);
 		if (!file.exists() || !file.isFile())
 			return "";
 		String result;
@@ -488,13 +497,13 @@ public class HttpServerSession extends Thread {
 			result = "text/plain";
 			break;
 		case "png":
-			result = "text/png";
+			result = "image/png";
 			break;
 		case "jpg":
-			result = "text/jpg";
+			result = "image/jpg";
 			break;
 		case "gif":
-			result = "text/gif";
+			result = "image/gif";
 			break;
 		default:
 			result = "application/octet-stream";

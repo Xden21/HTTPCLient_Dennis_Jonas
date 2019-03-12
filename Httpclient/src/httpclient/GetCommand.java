@@ -9,6 +9,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.BufferOverflowException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -52,17 +56,20 @@ public class GetCommand extends Command {
 	 */
 	@Override
 	public boolean executeCommand() throws IOException {
-		sendRequest();
+		ZonedDateTime lastmodified = getFileLastModified(getPath());
+		sendRequest(lastmodified);
 		return processResponse();
 	}
 
 	/**
 	 * Sends the GET request.
 	 */
-	private void sendRequest() {
+	private void sendRequest(ZonedDateTime modifiedSince) {
 		PrintWriter writer = new PrintWriter(getWriter());
 		writer.print("GET " + getPath() + " HTTP/1.1\r\n");
 		writer.print("Host: " + getHost() + "\r\n");
+		if (modifiedSince != null)
+			writer.print("If-Modified-Since: " + modifiedSince.format(DateTimeFormatter.RFC_1123_DATE_TIME) + "\r\n");
 		writer.print("\r\n");
 		writer.flush();
 	}
@@ -75,32 +82,30 @@ public class GetCommand extends Command {
 	 */
 
 	public boolean processResponse() throws IOException {
-		
+
 		// Read the header
 		ArrayList<String> header = getHeaderList();
- 
 
 		ResponseInfo parsedHeader = parseHeader(header, false);
 
 		setResponseInfo(parsedHeader);
 
-		// Read the resonse
-		Object response = readResponse();
+		if (parsedHeader.getStatusCode() != 304) {
+			// Read the resonse
+			Object response = readResponse();
 
-		setResponse(response);
+			setResponse(response);
 
-		// If html, parse for getting resources.
-		if (parsedHeader.getContentType() == ContentType.HTML)
-			parseHTMLPage((String) response);
-
+			// If html, parse for getting resources.
+			if (parsedHeader.getContentType() == ContentType.HTML)
+				parseHTMLPage((String) response);
+		}
 		return parsedHeader.getConnectionClosed();
 	}
 
 	/*
 	 * Parse functions
 	 */
-
-
 
 	/**
 	 * Parses a given html page, to check for MIME resources to get.
@@ -266,8 +271,6 @@ public class GetCommand extends Command {
 		return body;
 	}
 
-
-
 	/**
 	 * Reads the raw response thats in a chunked format.
 	 * 
@@ -349,7 +352,7 @@ public class GetCommand extends Command {
 		for (int i = 0; i < count; i++) {
 			body.add(buffer[i]);
 		}
-		if (rest != 0) {
+		while (rest != 0) {
 			buffer = new byte[rest];
 			count = reader.read(buffer, 0, rest);
 			for (int i = 0; i < count; i++) {
@@ -365,5 +368,28 @@ public class GetCommand extends Command {
 			result[i] = bodyarray[i];
 		}
 		return result;
+	}
+
+	/**
+	 * 
+	 * @param path
+	 * @return
+	 */
+	private ZonedDateTime getFileLastModified(String path) throws IllegalArgumentException {
+		if (path == null || path.indexOf("/") != 0)
+			throw new IllegalArgumentException("given file path is not valid");
+		if (path.equals("/")) {
+			return null;
+		}
+		String extenstion = path.substring(path.lastIndexOf(".")+1);
+		if(extenstion.equals("html"))
+			return null;
+		File file = new File("pages" + path);
+		if (!file.exists() || !file.isFile())
+			return null;
+
+		long timeSinceEpoch = file.lastModified();
+		Instant i = Instant.ofEpochMilli(timeSinceEpoch);
+		return ZonedDateTime.ofInstant(i, ZoneId.of("GMT"));
 	}
 }

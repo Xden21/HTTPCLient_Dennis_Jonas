@@ -45,8 +45,8 @@ public class PostCommand extends Command {
 		// Read the header
 		ResponseInfo info = parseHeader(getHeaderList(), false);
 		setResponseInfo(info);
-		System.out.print("BODY:");
-		System.out.print(getBody(info.getContentLength()));
+		System.out.println("BODY:");
+		System.out.println(getBody(info.getContentLength()));
 		return info.getConnectionClosed();
 	}
 
@@ -57,10 +57,10 @@ public class PostCommand extends Command {
 		PrintWriter writer = new PrintWriter(getWriter());
 		writer.print("POST " + getPath() + " HTTP/1.1\r\n");
 		writer.print("Host: " + getHost() + "\r\n");
-		writer.print("Content-Length: " + getContentLength()+ "\r\n");
+		writer.print("Content-Length: " + getContentLength() + "\r\n");
 		writer.print("Content-Type: text/plain\r\n");
 		writer.print("\r\n");
-		writer.print(input + "\r\n");
+		writer.print(input);
 		writer.flush();
 	}
 	

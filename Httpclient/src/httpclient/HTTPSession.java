@@ -146,7 +146,7 @@ public class HTTPSession {
 			System.out.println("Please enter the body here:");
 			BufferedReader postReader = new BufferedReader(new InputStreamReader(System.in));
 			String postString = postReader.readLine();
-			httpCommand = new PutCommand(getHost(), path, outputStream, inputStream, postString);
+			httpCommand = new PostCommand(getHost(), path, outputStream, inputStream, postString);
 			break;
 		default:
 			throw new UnsupportedOperationException("The given operation is not supported");
@@ -177,7 +177,7 @@ public class HTTPSession {
 		if (httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
 			if (httpCommand.getResponseInfo().getStatusCode() == 200) {
 				try {
-					savePage((String) httpCommand.getResponse(), httpCommand.getResponseInfo());
+					savePage((String) httpCommand.getResponse(), httpCommand.getResponseInfo(), path);
 				} catch (FileNotFoundException e) {
 					System.out.println("Page save failed");
 				}
@@ -262,12 +262,18 @@ public class HTTPSession {
 	 * @param response The response info of the command that fetched the page.
 	 * @throws FileNotFoundException The file couldn't be saved.
 	 */
-	private void savePage(String page, ResponseInfo response) throws FileNotFoundException {
+	private void savePage(String page, ResponseInfo response, String path) throws FileNotFoundException {
 		File dir = new File("pages/");
 		if (!dir.exists())
 			dir.mkdirs();
-
-		PrintWriter filewriter = new PrintWriter("pages/" + getHost() + "." + response.getContentType().getExtension());
+		PrintWriter filewriter;
+		if(path == "/") {
+			filewriter = new PrintWriter("pages/" + getHost() + "." + response.getContentType().getExtension());
+		}else {
+			filewriter = new PrintWriter("pages/" + path);
+		}
+		
+		
 		filewriter.print(page);
 		filewriter.flush();
 		filewriter.close();
