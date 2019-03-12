@@ -287,7 +287,7 @@ public abstract class Command {
 		} else {
 			if (headerMap.containsKey("content-length"))
 				contentLength = Integer.parseInt(headerMap.get("content-length"));
-			else if (isFooter)
+			else if (isFooter || code != 200)
 				contentLength = 0;
 			else
 				throw new IllegalResponseException("No Content-Length");

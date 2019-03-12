@@ -38,10 +38,24 @@ public class HttpServer {
 		while(true) {
 			Socket incomingConnection = this.socket.accept();
 			if(incomingConnection != null) {
-				HttpServerSession session = new HttpServerSession(incomingConnection);
+				HttpServerSession session = new HttpServerSession(incomingConnection, this);
 				session.start();
 				currentSessions.add(session);
 			}
 		}
+	}
+	
+	public void deleteSession(HttpServerSession session) {
+		this.currentSessions.remove(session);
+	}
+	
+	public void ShutDown() {
+		for(int i = currentSessions.size() - 1; i >= 0; i--) {
+			currentSessions.get(i).close();
+		}
+	}
+	
+	public static void main(String[] args) {
+		HttpServer server = new HttpServer(5000);
 	}
 }

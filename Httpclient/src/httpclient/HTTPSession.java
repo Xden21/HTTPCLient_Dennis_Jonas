@@ -15,10 +15,8 @@ public class HTTPSession {
 	/**
 	 * Creates a new http session.
 	 * 
-	 * @param host
-	 *            The host for this session
-	 * @param port
-	 *            The port for this session
+	 * @param host The host for this session
+	 * @param port The port for this session
 	 */
 	public HTTPSession(String host, int port) {
 		if (host == null || host == "")
@@ -103,23 +101,11 @@ public class HTTPSession {
 	/**
 	 * Sends the given command to the host and processes the response.
 	 * 
-	 * <<<<<<< HEAD:src/httpclient/HTTPSession.java
-	 * 
-	 * @param command
-	 *            The command to send
-	 * @param path
-	 *            The path for the command.
-	 * @throws UnsupportedOperationException
-	 *             The given command is unknown or not supported.
+	 * @param command The command to send
+	 * @param path    The path for the command.
+	 * @throws UnsupportedOperationException The given command is unknown or not
+	 *                                       supported.
 	 * @throws IOException
-	 *             =======
-	 * @param command
-	 *            The command to send
-	 * @param path
-	 *            The path for the command.
-	 * @throws UnsupportedOperationException
-	 *             The given command is unknown or not supported. >>>>>>>
-	 *             2dab3ac82d0e6b052dc224aaf06fd3e1044354cc:Httpclient/src/httpclient/HTTPSession.java
 	 */
 	public boolean sendCommand(String command, String path) throws UnsupportedOperationException, IOException {
 		Command httpCommand = null;
@@ -182,6 +168,11 @@ public class HTTPSession {
 			System.out.println((String) httpCommand.getResponse());
 		}
 
+		// Add blocker
+		if (command == "GET") {
+			ResponseInfo info = httpCommand.getResponseInfo();
+		}
+
 		// Save response to disk
 		if (httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
 			if (httpCommand.getResponseInfo().getStatusCode() == 200) {
@@ -205,11 +196,6 @@ public class HTTPSession {
 		if (closeConnection) {
 			closeConnection();
 			return true;
-		}
-
-		// Add blocker
-		if (command == "GET") {
-			ResponseInfo info = httpCommand.getResponseInfo();
 		}
 
 		// Check for resource requests
@@ -237,54 +223,44 @@ public class HTTPSession {
 				if (closeConnection) {
 					closeConnection();
 					return false;
-				} else {
-					try {
-						GetCommand requestCommand = new GetCommand(getHost(), "/" + request.getPath(), outputStream,
-								inputStream);
-						closeConnection = requestCommand.executeCommand();
-						if (requestCommand.getResponseInfo().getStatusCode() == 200) {
-							try {
-								// Save the resource to disk.
-								saveResource((byte[]) requestCommand.getResponse(), requestCommand.getPath());
-							} catch (Exception ex) {
-								System.out.println("Resource save failed");
-							}
+				}
+			} else {
+				try {
+					GetCommand requestCommand = new GetCommand(getHost(), "/" + request.getPath(), outputStream,
+							inputStream);
+					closeConnection = requestCommand.executeCommand();
+					if (requestCommand.getResponseInfo().getStatusCode() == 200) {
+						try {
+							// Save the resource to disk.
+							saveResource((byte[]) requestCommand.getResponse(), requestCommand.getPath());
+						} catch (Exception ex) {
+							System.out.println("Resource save failed");
 						}
-						if (closeConnection) {
-							closeConnection();
-							return true;
-						}
-					} catch (Exception ex) {
-						ex.printStackTrace();
-						System.out.println("Resource Command failed, closing connection");
-
 					}
+					if (closeConnection) {
+						closeConnection();
+						return true;
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+					System.out.println("Resource Command failed, closing connection");
+
 				}
 			}
+
 		}
 
 		System.out.println("Request finished");
 		return true;
+
 	}
 
 	/**
 	 * Saves the given html page to disk.
 	 * 
-	 * <<<<<<< HEAD:src/httpclient/HTTPSession.java
-	 * 
-	 * @param page
-	 *            The html page to save.
-	 * @param response
-	 *            The response info of the command that fetched the page.
-	 * @throws FileNotFoundException
-	 *             The file couldn't be saved. =======
-	 * @param page
-	 *            The html page to save.
-	 * @param response
-	 *            The response info of the command that fetched the page.
-	 * @throws FileNotFoundException
-	 *             The file couldn't be saved. >>>>>>>
-	 *             2dab3ac82d0e6b052dc224aaf06fd3e1044354cc:Httpclient/src/httpclient/HTTPSession.java
+	 * @param page     The html page to save.
+	 * @param response The response info of the command that fetched the page.
+	 * @throws FileNotFoundException The file couldn't be saved.
 	 */
 	private void savePage(String page, ResponseInfo response) throws FileNotFoundException {
 		File dir = new File("pages/");
@@ -300,25 +276,10 @@ public class HTTPSession {
 	/**
 	 * Saves the given dataset to disk.
 	 * 
-	 * <<<<<<< HEAD:src/httpclient/HTTPSession.java
-	 * 
-	 * @param resource
-	 *            The dataset to save.
-	 * @param path
-	 *            The path to save to, including file name and extension
-	 * @throws IOException
-	 *             The file couldn't be written to.
-	 * @throws FileNotFoundException
-	 *             The file couldn't be opened or created. =======
-	 * @param resource
-	 *            The dataset to save.
-	 * @param path
-	 *            The path to save to, including file name and extension
-	 * @throws IOException
-	 *             The file couldn't be written to.
-	 * @throws FileNotFoundException
-	 *             The file couldn't be opened or created. >>>>>>>
-	 *             2dab3ac82d0e6b052dc224aaf06fd3e1044354cc:Httpclient/src/httpclient/HTTPSession.java
+	 * @param resource The dataset to save.
+	 * @param path     The path to save to, including file name and extension
+	 * @throws IOException           The file couldn't be written to.
+	 * @throws FileNotFoundException The file couldn't be opened or created.
 	 */
 	private void saveResource(byte[] resource, String path) throws IOException, FileNotFoundException {
 		String dirpath = "pages/" + path.substring(1, path.lastIndexOf("/") + 1);
