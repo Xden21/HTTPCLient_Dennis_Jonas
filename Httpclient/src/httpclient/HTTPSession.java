@@ -1,8 +1,8 @@
 package httpclient;
 
-import java.util.*;
 import java.io.*;
 import java.net.*;
+import java.util.Stack;
 
 /**
  * The http session class. This handles a connection to a host.
@@ -163,14 +163,16 @@ public class HTTPSession {
 
 		// Fetch response
 
-		if (httpCommand.getResponse() != null && httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
+		if (httpCommand.getResponse() != null && (httpCommand.getResponseInfo().getContentType() == ContentType.HTML) || (httpCommand.getResponseInfo().getContentType() == ContentType.TEXT)) {
 			System.out.println("RESPONSE:");
 			System.out.println((String) httpCommand.getResponse());
 		}
 
 		// Add blocker
-		if (command == "GET") {
+		if (command.equals("GET")) {
 			ResponseInfo info = httpCommand.getResponseInfo();
+			String newPage = AdBlocker.blockAdvertisements((String) httpCommand.getResponse(), info);
+			httpCommand.setResponse(newPage);
 		}
 
 		// Save response to disk
@@ -298,4 +300,5 @@ public class HTTPSession {
 		filewriter.flush();
 		filewriter.close();
 	}
+	
 }
