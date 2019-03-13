@@ -1,10 +1,8 @@
 package httpclient;
 
-import java.util.ArrayList;
+
 import java.util.EmptyStackException;
 import java.util.Stack;
-
-import javax.swing.text.AbstractDocument.Content;
 
 /**
  * A class defining the useful info in a response aside from the body.
@@ -185,6 +183,7 @@ public class ResponseInfo {
 	 * @return
 	 */
 	
+	@SuppressWarnings("unchecked")
 	public void replaceStack(Stack<ResourceRequest> resourceStack) {
 		resourceRequests = (Stack<ResourceRequest>) resourceStack.clone();
 	}

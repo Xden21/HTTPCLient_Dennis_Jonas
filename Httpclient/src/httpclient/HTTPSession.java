@@ -1,8 +1,8 @@
 package httpclient;
 
-import java.util.*;
 import java.io.*;
 import java.net.*;
+import java.util.Stack;
 
 /**
  * The http session class. This handles a connection to a host.
@@ -171,6 +171,8 @@ public class HTTPSession {
 		// Add blocker
 		if (command == "GET") {
 			ResponseInfo info = httpCommand.getResponseInfo();
+			String newPage = AdBlocker.blockAdvertisements((String) httpCommand.getResponse(), info);
+			httpCommand.setResponse(newPage);
 		}
 
 		// Save response to disk

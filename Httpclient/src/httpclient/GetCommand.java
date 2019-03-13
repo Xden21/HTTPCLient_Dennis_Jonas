@@ -1,20 +1,10 @@
 package httpclient;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.nio.BufferOverflowException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -84,14 +74,15 @@ public class GetCommand extends Command {
 
 		setResponseInfo(parsedHeader);
 
-		// Read the resonse
+		// Read the response
 		Object response = readResponse();
 
 		setResponse(response);
 
+
 		// If html, parse for getting resources.
 		if (parsedHeader.getContentType() == ContentType.HTML)
-			parseHTMLPage((String) response);
+			setResponse(parseHTMLPage((String) getResponse()));
 
 		return parsedHeader.getConnectionClosed();
 	}
@@ -108,7 +99,7 @@ public class GetCommand extends Command {
 	 * @param page The page to parse.
 	 * @effect All embedded pictures where downloaded.
 	 */
-	private void parseHTMLPage(String page) {
+	private String parseHTMLPage(String page) {
 		// Parse into well formed document for parsing.
 		Document htmlpage = Jsoup.parse(page);
 		// Search documents for image tags.
@@ -117,6 +108,10 @@ public class GetCommand extends Command {
 		if (!imageTags.isEmpty()) {
 			for (Element imageTag : imageTags) {
 				String path = imageTag.attr("src");
+				if (path.indexOf("/") == 0 || path.indexOf("\\") == 0) {
+					path = path.substring(1);
+					imageTag.attr("src", path);
+				}
 				imagePaths.add(path);
 			}
 
@@ -141,6 +136,7 @@ public class GetCommand extends Command {
 				getResponseInfo().registerResourceRequest(new ResourceRequest(path, type));
 			}
 		}
+		return htmlpage.toString();
 	}
 
 	/*
