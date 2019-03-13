@@ -371,9 +371,11 @@ public class GetCommand extends Command {
 	}
 
 	/**
+	 * Gets the time the file at the given path was modified.
 	 * 
-	 * @param path
-	 * @return
+	 * @param path the path to the file to check
+	 * @return null if the path isn't a file or doens't exist else the time the file was last modified.
+	 * @throws IllegalArgumentException The given path is not valid.
 	 */
 	private ZonedDateTime getFileLastModified(String path) throws IllegalArgumentException {
 		if (path == null || path.indexOf("/") != 0)
