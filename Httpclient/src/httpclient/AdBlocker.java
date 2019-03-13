@@ -14,7 +14,7 @@ public class AdBlocker {
 	}
 	
 	/**
-	 * 1. Search for images (already done by Dennis
+	 * 1. Search for images (already done by Dennis)
 	 * 2. Check if they are an advertisement
 	 * 3a. If not an advertisement, add to imagePaths
 	 * 3b. else: replace the advertisement by an image of a cat
@@ -22,7 +22,7 @@ public class AdBlocker {
 	 * and 2) replacing the string of the image by the string of the cat ( imageTag.attr("src", catPath)
 	 * @param page
 	 * @param info
-	 * @return
+	 * @return The new web page, edited to make the magic happen
 	 */
 	public static String blockAdvertisements(String page, ResponseInfo info) {
 		while(info.hasResourceRequests()) { //Empty resource requests
