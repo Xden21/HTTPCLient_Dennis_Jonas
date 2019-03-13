@@ -6,7 +6,8 @@ import java.util.ArrayList;
 /**
  * A class for the HTML Post command implementation
  *
- * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
  */
 
 public class PostCommand extends Command {

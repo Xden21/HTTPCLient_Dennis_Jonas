@@ -45,6 +45,7 @@ public class AdBlocker {
 					// (we only replace the catPath, not the width/height) 
 					String catPath = getCatImagePath(catCount);
 					imageTag.attr("src", catPath);
+					imageTag.attr("alt","catGif");
 				}
 				catCount = (catCount + 1) % catHerdSize;
 			}
@@ -73,18 +74,40 @@ public class AdBlocker {
 		return htmlpage.toString();
 	}
 	
+	/**
+	 * Check if the path is an advertisement
+	 * 
+	 * @param path the path to check
+	 * @return true if the path is an ad, else false
+	 */
 	private static boolean isAdvertisementPicture(String path) {
 		return path.contains("ad");
 	}
 	
+	/**
+	 * Check if the path or the alt attritute indicates this element is an ad.
+	 * 
+	 * @param path the path of the element source
+	 * @param altText the text of the alt attribute
+	 * @return true of the element is an ad, false otherwise
+	 */
 	private static boolean isAdvertisementPicture(String path, String altText) {
 		return path.contains("ad") || altText.contains("Ad");
 	}
 	
+	/**
+	 * Get the image path for the cat gif alternate picture
+	 * 
+	 * @param cat the number of the picture
+	 * @return the path
+	 */
 	private static String getCatImagePath(int cat) {
 		return "catGifSource/giphy" + String.valueOf(cat) + ".gif";
 	}
 	
+	/**
+	 * The amount of cat gifs.
+	 */
 	private static int catHerdSize = 10;
 	
 

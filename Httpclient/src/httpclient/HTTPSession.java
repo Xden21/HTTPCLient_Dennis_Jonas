@@ -105,7 +105,8 @@ public class HTTPSession {
 	 * @param path    The path for the command.
 	 * @throws UnsupportedOperationException The given command is unknown or not
 	 *                                       supported.
-	 * @throws IOException
+	 * @throws IOException                   A problem occured reading or writing to
+	 *                                       the socket
 	 */
 	public boolean sendCommand(String command, String path) throws UnsupportedOperationException, IOException {
 		Command httpCommand = null;
@@ -161,18 +162,17 @@ public class HTTPSession {
 			return false;
 		}
 
-		// Fetch response
-
-		if (httpCommand.getResponse() != null && (httpCommand.getResponseInfo().getContentType() == ContentType.HTML) || (httpCommand.getResponseInfo().getContentType() == ContentType.TEXT)) {
-			System.out.println("RESPONSE:");
-			System.out.println((String) httpCommand.getResponse());
-		}
-
 		// Add blocker
 		if (command.equals("GET")) {
 			ResponseInfo info = httpCommand.getResponseInfo();
 			String newPage = AdBlocker.blockAdvertisements((String) httpCommand.getResponse(), info);
 			httpCommand.setResponse(newPage);
+		}
+
+		if (httpCommand.getResponse() != null && (httpCommand.getResponseInfo().getContentType() == ContentType.HTML)
+				|| (httpCommand.getResponseInfo().getContentType() == ContentType.TEXT)) {
+			System.out.println("RESPONSE:");
+			System.out.println((String) httpCommand.getResponse());
 		}
 
 		// Save response to disk
@@ -269,13 +269,12 @@ public class HTTPSession {
 		if (!dir.exists())
 			dir.mkdirs();
 		PrintWriter filewriter;
-		if(path == "/") {
+		if (path == "/") {
 			filewriter = new PrintWriter("pages/" + getHost() + "." + response.getContentType().getExtension());
-		}else {
+		} else {
 			filewriter = new PrintWriter("pages/" + path);
 		}
-		
-		
+
 		filewriter.print(page);
 		filewriter.flush();
 		filewriter.close();
@@ -300,5 +299,5 @@ public class HTTPSession {
 		filewriter.flush();
 		filewriter.close();
 	}
-	
+
 }

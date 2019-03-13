@@ -6,7 +6,8 @@ import java.util.ArrayList;
 /**
  * A class for the HTML Put command implementation
  *
- * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
  */
 
 public class PutCommand extends Command {

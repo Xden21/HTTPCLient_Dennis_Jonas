@@ -179,6 +179,7 @@ public class ResponseInfo {
 	
 	/**
 	 * Replace the current resource stack with the given resource stack
+	 * 
 	 * @param resourceStack
 	 * @return
 	 */

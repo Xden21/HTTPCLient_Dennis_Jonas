@@ -173,9 +173,8 @@ public abstract class Command {
 	/**
 	 * Get the header list, a list of header line strings easily convertible to a hashmap 
 	 * @return	header list
-	 * @throws IOException
-	 */
-	
+	 * @throws IOException Read failed
+	 */	
 	protected ArrayList<String> getHeaderList() throws IOException{
 		ArrayList<String> header = new ArrayList<>();
 		String line = readLine();
@@ -192,7 +191,12 @@ public abstract class Command {
 		return header;
 	}
 	
-	
+	/**
+	 * Gets the body of the response
+	 * @param contentLength the length of the body
+	 * @return the body of the respone
+	 * @throws IOException Read failed
+	 */
 	protected String getBody(int contentLength) throws IOException{
 		String body = "";
 		InputStream reader = getReader();

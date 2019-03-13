@@ -28,20 +28,33 @@ import java.util.HashMap;
 
 import javax.management.StandardEmitterMBean;
 
+/**
+ * An http session with a client.
+ * 
+ * @author Dennis Debree
+ * @author Jonas Bertels
+ */
 public class HttpServerSession extends Thread {
 
 	/**
-	 * 
+	 * The socket for this session
 	 */
 	Socket socket;
 
+	/**
+	 * Boolean discribing if the session must be terminated
+	 */
 	private boolean terminate;
 
+	/**
+	 * The server this session belongs to.
+	 */
 	private HttpServer server;
 
 	/**
+	 * Creates a new http server session
 	 * 
-	 * @param socket
+	 * @param socket the socket used to connect to the client
 	 */
 	public HttpServerSession(Socket socket, HttpServer server) throws IllegalArgumentException {
 		if (socket == null) {
@@ -55,7 +68,8 @@ public class HttpServerSession extends Thread {
 	}
 
 	/**
-	 * 
+	 * Reads the incoming request and responds accordingly by the http standard
+	 * Responds to PUT, POST, GET and HEAD
 	 */
 	@Override
 	public void run() {
@@ -82,7 +96,7 @@ public class HttpServerSession extends Thread {
 				}
 				if (!headerLines.isEmpty()) {
 					System.out.println("HEADER:");
-					for(String locline : headerLines)
+					for (String locline : headerLines)
 						System.out.println(locline);
 					System.out.println("");
 					// Parse request header
@@ -227,68 +241,79 @@ public class HttpServerSession extends Thread {
 		if (headerMap.containsKey("connection"))
 			connectionclosed = (headerMap.get("connection") == "close" || headerMap.get("connection") == "Closed");
 
-		return new RequestInfo(command, path, date, ifModifiedSince, connectionclosed, isBadRequest, type, contentLength);
+		return new RequestInfo(command, path, date, ifModifiedSince, connectionclosed, isBadRequest, type,
+				contentLength);
 	}
 
 	/**
+	 * Handles the GET and POST request
 	 * 
-	 * @param info
-	 * @param writer
-	 * @param headonly
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
+	 * @param info     The info of the request
+	 * @param writer   The writer used to write to the client
+	 * @param headonly boolean indicating if its HEAD or GET
+	 * @throws IOException A read or write went wrong
 	 */
-	private void handleOutput(RequestInfo info, OutputStream writer, boolean headonly)
-			throws UnsupportedEncodingException, IOException {
+	private void handleOutput(RequestInfo info, OutputStream writer, boolean headonly) throws IOException {
 		long size = -1;
 		try {
 			size = getFileSize(info.getPath());
-		} catch (IllegalArgumentException ex) {		}
-		if (size < 0) {
-			byte[] resp = "File not found".getBytes();
-			SendResponse(writer, ResponseCode.NOT_FOUND, "text/plain", resp, resp.length, false);
-		} else {
-			if (info.getModifiedSince() != "") {
-				ZonedDateTime targetTime = ZonedDateTime
-						.parse(info.getModifiedSince(), DateTimeFormatter.RFC_1123_DATE_TIME)
-						.withZoneSameInstant(ZoneId.systemDefault());
-				ZonedDateTime lastmodify = getFileLastModified(info.getPath());
+		} catch (IllegalArgumentException ex) {
+		}
+		try {
+			if (size < 0) {
+				byte[] resp = "File not found".getBytes();
+				SendResponse(writer, ResponseCode.NOT_FOUND, "text/plain", resp, resp.length, false);
+			} else {
+				if (info.getModifiedSince() != "") {
+					ZonedDateTime targetTime = ZonedDateTime
+							.parse(info.getModifiedSince(), DateTimeFormatter.RFC_1123_DATE_TIME)
+							.withZoneSameInstant(ZoneId.systemDefault());
+					ZonedDateTime lastmodify = getFileLastModified(info.getPath());
 
-				if (lastmodify.isAfter(targetTime)) {
+					if (lastmodify.isAfter(targetTime)) {
+						if (headonly) {
+							SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), null, size,
+									true);
+						} else {
+							byte[] body = readFile(info.getPath());
+							if (body.length != size)
+								System.out.println("Size error!!");
+							SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), body, size,
+									false);
+						}
+					} else {
+						// File not modified
+						SendEmptyResponse(writer, ResponseCode.NOT_MODIFIED);
+					}
+				} else {
 					if (headonly) {
 						SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), null, size,
 								true);
 					} else {
 						byte[] body = readFile(info.getPath());
-						if(body.length != size)
+						if (body.length != size)
 							System.out.println("Size error!!");
 						SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), body, size,
 								false);
 					}
-				} else {
-					// File not modified
-					SendEmptyResponse(writer, ResponseCode.NOT_MODIFIED);
-				}
-			} else {
-				if (headonly) {
-					SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), null, size, true);
-				} else {
-					byte[] body = readFile(info.getPath());
-					if(body.length != size)
-						System.out.println("Size error!!");
-					SendResponse(writer, ResponseCode.SUCCESS, getFileContentType(info.getPath()), body, size, false);
 				}
 			}
+		} catch (UnsupportedEncodingException ex) {
+			System.out.println("shouldn't happen!");
 		}
 	}
 
 	/**
-	 * @throws IOException
-	 * @throws UnsupportedEncodingException
+	 * Handles the PUT and POST command
 	 * 
+	 * @param info    the info of the request
+	 * @param writer  the writer to the client
+	 * @param reader  the reader from the client
+	 * @param newFile boolean indicating if the file must be created or appended
+	 * @throws IOException a read or write failed
 	 */
 	private void handeInput(RequestInfo info, OutputStream writer, InputStream reader, boolean newFile)
-			throws UnsupportedEncodingException, IOException {
+			throws IOException {
 		// Read body
 		byte[] result;
 		try {
@@ -354,11 +379,12 @@ public class HttpServerSession extends Thread {
 		stream.write(("Date: " + date + "\r\n").getBytes(Charset.forName("US-ASCII")));
 		if (body != null || headOnly) {
 			stream.write(("Content-Type: " + contentType + "\r\n").getBytes(Charset.forName("US-ASCII")));
-			stream.write(("Content-Length: " + Long.toString(bodylength) + "\r\n").getBytes(Charset.forName("US-ASCII")));
+			stream.write(
+					("Content-Length: " + Long.toString(bodylength) + "\r\n").getBytes(Charset.forName("US-ASCII")));
 		}
 		stream.write("\r\n".getBytes(Charset.forName("US-ASCII")));
 		if (body != null)
-			stream.write(body, 0, (int)bodylength);
+			stream.write(body, 0, (int) bodylength);
 	}
 
 	/**
@@ -445,11 +471,14 @@ public class HttpServerSession extends Thread {
 	}
 
 	/**
+	 * Gets the file size of the file at the given path
 	 * 
-	 * @param path
-	 * @return
+	 * @param path the path to the file
+	 * @return if the path isn't to a file or doens't exist, -1 else the size of the
+	 *         file
+	 * @throws IllegalArgumentException The path isn't valid
 	 */
-	private long getFileSize(String path) {
+	private long getFileSize(String path) throws IllegalArgumentException {
 		if (path == null || path.indexOf("/") != 0)
 			throw new IllegalArgumentException("given file path is not valid");
 		File file = new File("webpage" + path);
@@ -459,9 +488,12 @@ public class HttpServerSession extends Thread {
 	}
 
 	/**
+	 * Gets the last modification time of the given file.
 	 * 
-	 * @param path
-	 * @return
+	 * @param path the path to the file
+	 * @return if the path isn't to a file or doens't exist, the current time else
+	 *         the time of the last modification of the file
+	 * @throws IllegalArgumentException The path isn't valid
 	 */
 	private ZonedDateTime getFileLastModified(String path) throws IllegalArgumentException {
 		if (path == null || path.indexOf("/") != 0)
@@ -475,6 +507,13 @@ public class HttpServerSession extends Thread {
 		return ZonedDateTime.ofInstant(i, ZoneId.systemDefault());
 	}
 
+	/**
+	 * Reads the file at the given path
+	 * 
+	 * @param path the path to the file
+	 * @return The content of the file
+	 * @throws IOException the read failed
+	 */
 	private byte[] readFile(String path) throws IOException {
 		if (path == null || path.indexOf("/") != 0)
 			throw new IllegalArgumentException("given file path is not valid");
@@ -482,7 +521,13 @@ public class HttpServerSession extends Thread {
 		return Files.readAllBytes(Path.of("webpage" + path));
 	}
 
-	private String getFileContentType(String path) {
+	/**
+	 * Gets the content type of the file at the given path.
+	 * @param path the path to the file
+	 * @return the content type
+	 * @throws IllegalArgumentException the given path is not valid
+	 */
+	private String getFileContentType(String path) throws IllegalArgumentException {
 		if (path == null || path.indexOf("/") != 0)
 			throw new IllegalArgumentException("given file path is not valid");
 		File file = new File("webpage" + path);
