@@ -197,7 +197,7 @@ public abstract class Command {
 		String body = "";
 		InputStream reader = getReader();
 		for (int i=0; i<contentLength; i++) {
-			body += reader.read();
+			body += (char)(reader.read());
 		}
 		return body;
 	}
@@ -299,6 +299,9 @@ public abstract class Command {
 			switch (contentType) {
 			case "text/html":
 				type = ContentType.HTML;
+				break;
+			case "text/plain":
+				type = ContentType.TEXT;
 				break;
 			case "image/png":
 				type = ContentType.IMAGEPNG;

@@ -2,7 +2,7 @@ package httpserver;
 
 public class RequestInfo {
 
-	public RequestInfo(String command, String path, String date, String modifiedSince, boolean connectionClose, boolean isBadRequest, ContentType contentType) {
+	public RequestInfo(String command, String path, String date, String modifiedSince, boolean connectionClose, boolean isBadRequest, ContentType contentType, int contentLength) {
 		if(!isValidCommand(command))
 			throw new IllegalArgumentException("Given command is not valid");
 		if(path == null || path == "" || path.indexOf("/") != 0)
@@ -11,7 +11,7 @@ public class RequestInfo {
 			throw new IllegalArgumentException("Given date is not valid");
 		if(modifiedSince == null)
 			throw new IllegalArgumentException("Given modified since is not valid");
-		if(contentType == null || contentType == ContentType.UNKNOWN)
+		if(contentType == null)
 			throw new IllegalArgumentException("Given content type is not valid or supported");
 		if(contentLength < 0)
 			throw new IllegalArgumentException("Given content length is not valid");
@@ -22,6 +22,7 @@ public class RequestInfo {
 		this.modifiedSince = modifiedSince;
 		this.connectionClose = connectionClose;
 		this.isBadRequest = isBadRequest;
+		this.contentLength = contentLength;
 	}
 
 	
@@ -49,7 +50,7 @@ public class RequestInfo {
 	public static boolean isValidCommand(String command) {
 		if(command == null)
 			return false;
-		if(command == "GET" || command == "HEAD" || command == "POST" || command == "PUT") {
+		if(command.equals("GET") || command.equals("HEAD") || command.equals("POST") || command.equals("PUT")) {
 			return true;
 		}
 		return false;

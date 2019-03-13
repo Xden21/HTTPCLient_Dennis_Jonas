@@ -7,7 +7,7 @@ package httpclient;
  * @author Jonas Bertels
  */
 public enum ContentType {
-	HTML("html"),IMAGEJPG("jpg"), IMAGEPNG("png"), IMAGEGIF("gif"), UNKNOWN("");
+	HTML("html"),IMAGEJPG("jpg"), IMAGEPNG("png"), IMAGEGIF("gif"), UNKNOWN(""), TEXT(".txt");
 	
 	/**
 	 * Creates a new content type
