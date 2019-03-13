@@ -161,7 +161,7 @@ public class GetCommand extends Command {
 	 */
 	private Object readResponse() throws IOException, IllegalResponseException {
 		// Check content type and if the response will be chunked
-		if (getResponseInfo().getContentType() == ContentType.HTML) {
+		if (getResponseInfo().getContentType() == ContentType.HTML || getResponseInfo().getContentType() == ContentType.TEXT) {
 			String response = "";
 			if (getResponseInfo().isChunked()) {
 				response = readChunkedPage();

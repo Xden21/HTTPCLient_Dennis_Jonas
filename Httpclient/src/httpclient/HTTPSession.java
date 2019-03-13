@@ -163,7 +163,7 @@ public class HTTPSession {
 
 		// Fetch response
 
-		if (httpCommand.getResponse() != null && httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
+		if (httpCommand.getResponse() != null && (httpCommand.getResponseInfo().getContentType() == ContentType.HTML) || (httpCommand.getResponseInfo().getContentType() == ContentType.TEXT)) {
 			System.out.println("RESPONSE:");
 			System.out.println((String) httpCommand.getResponse());
 		}
@@ -300,4 +300,5 @@ public class HTTPSession {
 		filewriter.flush();
 		filewriter.close();
 	}
+	
 }
