@@ -163,7 +163,7 @@ public class HTTPSession {
 		}
 
 		// Add blocker
-		if (command.equals("GET")) {
+		if (command.equals("GET") && httpCommand.getResponseInfo().getContentType() == ContentType.HTML) {
 			ResponseInfo info = httpCommand.getResponseInfo();
 			String newPage = AdBlocker.blockAdvertisements((String) httpCommand.getResponse(), info);
 			httpCommand.setResponse(newPage);
